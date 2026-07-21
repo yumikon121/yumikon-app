@@ -1104,7 +1104,7 @@
       const dateStr = d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
       const isGn    = e.type === 'gn';
       const title   = isGn ? (e.dekita || e.kizuki || e.kansha || '（内容なし）')
-                            : (e.dekigoto || e.fact || '（内容なし）');
+                            : (e.fact || e.dekigoto || e.moya || '（内容なし）');
       const preview = isGn ? (e.kansha  ? '🙏 ' + e.kansha  : '')
                             : (e.insight ? '✨ ' + e.insight : '');
       return `

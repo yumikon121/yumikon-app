@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>YUMIコン ワークアプリ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F8F5F2;
+    --card: #FFFFFF;
+    --border: #E8E2DC;
+    --dark: #3C3430;
+    --mid: #7C7470;
+    --light: #A09488;
+    --accent: #C4827A;
+    --accent-light: #F5EDEC;
+    --green: #7A9E8E;
+    --green-light: #EDF5F1;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--dark);
+    font-family: -apple-system, 'Hiragino Sans', sans-serif;
+    min-height: 100vh;
+  }
+  body.mode-jiji { background: #FBF3F2; }
+  body.mode-gn   { background: #F0F7F4; }
+
+  /* ヘッダー */
+  .header {
+    background: var(--dark);
+    color: white;
+    padding: 12px 16px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .header-title { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+
+  .nav-tabs { display: flex; gap: 6px; }
+  .tab-btn {
+    background: #5C5450;
+    border: none;
+    color: #D0C8C4;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tab-btn.active       { background: var(--accent); color: white; }
+  .tab-btn.active-green { background: var(--green);  color: white; }
+
+  /* モードタブ */
+  .mode-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px 0;
+    background: var(--bg);
+  }
+  .mode-tab {
+    flex: 1;
+    padding: 8px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: white;
+    color: var(--mid);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+  }
+  .mode-tab.active-jiji { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .mode-tab.active-gn   { border-color: var(--green);  color: var(--green);  background: var(--green-light); }
+
+  /* メインコンテンツ */
+  .view { display: none; padding: 12px 16px 140px; }
+  .view.active { display: block; }
+
+  /* DAYバッジ */
+  .date-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    color: var(--light);
+    font-size: 12px;
+  }
+  .day-badge {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .day-badge.green { background: var(--green-light); color: var(--green); }
+  .settings-btn {
+    background: none;
+    border: none;
+    color: var(--light);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 2px 6px;
+  }
+
+  /* 日付ピッカー */
+  .date-picker-wrap {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .date-picker-label { font-size: 12px; color: var(--light); font-weight: 700; white-space: nowrap; }
+  .date-picker-wrap input[type="date"] {
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--dark);
+    outline: none;
+    flex: 1;
+  }
+
+  .kotz { margin-top: 8px; font-size: 11px; color: var(--light); line-height: 1.7; }
+
+  /* フォームカード */
+  .field-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+  }
+  .field-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .field-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .field-num.green { background: var(--green-light); color: var(--green); }
+  .field-label { font-size: 15px; font-weight: 700; color: var(--dark); }
+  .field-hint  { font-size: 11px; color: var(--light); margin-top: 1px; }
+
+  textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--dark);
+    background: var(--bg);
+    resize: none;
+    min-height: 80px;
+    line-height: 1.6;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus       { border-color: var(--accent); }
+  textarea.green:focus { border-color: var(--green); }
+  textarea::placeholder { color: var(--light); }
+
+  /* チアオーバーレイ */
+  .cheer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    z-index: 9999;
+    pointer-events: none;
+  }
+  .cheer-overlay.show { opacity: 1; }
+  .cheer-toast {
+    width: 300px;
+    height: 290px;
+    background: linear-gradient(160deg, #D4908A 0%, #C4827A 100%);
+    clip-path: path("M150 265 C150 265 18 178 18 92 C18 50 46 24 78 24 C104 24 126 38 150 62 C174 38 196 24 222 24 C254 24 282 50 282 92 C282 178 150 265 150 265Z");
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 85px 50px 20px;
+    text-align: center;
+    transform: scale(0.8) translateY(20px);
+    transition: transform 1s cubic-bezier(0.22,1,0.36,1), opacity 0.8s ease;
+    opacity: 0;
+    box-shadow: none;
+  }
+  .cheer-overlay.show .cheer-toast {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  .cheer-toast-text {
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .cheer-toast-sub {
+    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+  }
+
+  /* シャッターボタン */
+  .shutter-wrap { margin: 4px 0 12px; }
+  .shutter-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--dark) 0%, #5C5450 100%);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 20px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    letter-spacing: 0.5px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 12px rgba(60,52,48,0.25);
+  }
+  .shutter-btn:active { transform: scale(0.97); }
+  .shutter-btn.open   { background: linear-gradient(135deg, #7A9E8E 0%, #5A8070 100%); }
+  .shutter-arrow { font-size: 11px; transition: transform 0.3s; }
+  .shutter-btn.open .shutter-arrow { transform: rotate(180deg); }
+
+  .shutter-msg {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .shutter-msg.show { max-height: 160px; }
+  .shutter-msg-inner {
+    background: linear-gradient(135deg, #3C3430 0%, #2E2622 100%);
+    border-radius: 0 0 14px 14px;
+    padding: 16px 20px 18px;
+    text-align: center;
+  }
+  .shutter-msg-title {
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .shutter-msg-sub {
+    color: rgba(255,255,255,0.65);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  /* ボタンエリア */
+  .actions {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 16px 28px;
+    background: linear-gradient(to bottom, transparent, var(--bg) 30%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-save {
+    background: linear-gradient(135deg, #4A3F3A 0%, #3C3430 60%, #2E2622 100%);
+    color: white;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(60,52,48,0.3);
+  }
+  .btn-line {
+    background: linear-gradient(135deg, #00C44F 0%, #06C755 60%, #00A844 100%);
+    color: white;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(6,199,85,0.3);
+  }
+  .btn-secondary {
+    background: var(--card);
+    color: var(--mid);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    padding: 11px;
+  }
+
+  /* 履歴 */
+  .history-empty {
+    text-align: center; color: var(--light);
+    padding: 60px 20px; font-size: 14px; line-height: 1.8;
+  }
+  .history-item {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .history-item.gn   { border-left: 4px solid var(--green); }
+  .history-item.jiji { border-left: 4px solid var(--accent); }
+  .history-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .history-date { font-size: 11px; color: var(--light); }
+  .history-type-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .badge-jiji { background: var(--accent-light); color: var(--accent); }
+  .badge-gn   { background: var(--green-light);  color: var(--green); }
+  .history-title {
+    font-size: 15px; font-weight: 700; color: var(--dark);
+    margin-bottom: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .history-preview {
+    font-size: 12px; color: var(--mid);
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5;
+  }
+
+  /* 詳細ビュー */
+  .detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .back-btn {
+    background: none; border: none;
+    color: var(--accent); font-size: 15px;
+    cursor: pointer; font-family: inherit; padding: 4px 0;
+  }
+  .detail-date { font-size: 13px; color: var(--light); }
+  .detail-section { margin-bottom: 16px; }
+  .detail-label {
+    font-size: 12px; font-weight: 700; color: var(--light);
+    letter-spacing: 0.5px; margin-bottom: 6px;
+  }
+  .detail-text { font-size: 14px; color: var(--dark); line-height: 1.7; white-space: pre-wrap; }
+  .detail-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-del {
+    flex: 1; background: #FFF0EF; color: #C4827A;
+    border: 1px solid #F0D0CE; border-radius: 12px;
+    padding: 12px; font-size: 14px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+  .btn-edit {
+    flex: 1; background: var(--accent-light); color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 12px;
+    padding: 12px; font-size: 14px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+  .btn-line-small {
+    flex: 2; background: #06C755; color: white;
+    border: none; border-radius: 12px;
+    padding: 12px; font-size: 14px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+  }
+
+  /* モーダル */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 20px; padding: 28px 24px; width: 88%; max-width: 360px; }
+  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--dark); }
+  .modal p  { font-size: 13px; color: var(--mid); margin-bottom: 16px; line-height: 1.6; }
+  .modal input[type="number"] {
+    width: 100%; border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px;
+    font-size: 22px; font-weight: 700; font-family: inherit;
+    color: var(--dark); text-align: center;
+    margin-bottom: 16px; outline: none;
+  }
+  .modal input[type="number"]:focus { border-color: var(--accent); }
+  .modal-btn {
+    width: 100%; background: var(--accent); color: white;
+    border: none; border-radius: 12px; padding: 14px;
+    font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+
+  /* トースト */
+  .toast {
+    position: fixed; top: 70px; left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: var(--dark); color: white;
+    padding: 12px 24px; border-radius: 30px;
+    font-size: 14px; font-weight: 700;
+    opacity: 0; transition: opacity 0.3s, transform 0.3s;
+    z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div><div class="header-title">YUMIコン ワークアプリ</div></div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tab-write"   onclick="showView('write')">書く</button>
+      <button class="tab-btn"        id="tab-history" onclick="showView('history')">履歴</button>
+    </div>
+  </div>
+  <div id="login-status" style="display:none; font-size:11px; color:var(--mid); padding:4px 0 0; display:flex; align-items:center; justify-content:space-between;">
+    <span id="login-status-text"></span>
+    <button onclick="logout()" style="background:none; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:11px; color:var(--mid); padding:2px 8px; cursor:pointer;">ログアウト</button>
+  </div>
+</div>
+
+<!-- 書くビュー -->
+<div class="view active" id="view-write">
+
+  <div class="mode-tabs">
+    <button class="mode-tab active-gn"  id="mode-gn"   onclick="setMode('gn')">✨ G&amp;N</button>
+    <button class="mode-tab"            id="mode-jiji" onclick="setMode('jiji')">📌 事実と解釈</button>
+  </div>
+
+  <div style="padding:12px 0 0">
+    <div class="date-badge">
+      <span class="day-badge" id="day-count"></span>
+      <button class="settings-btn" onclick="openDayModal()">⚙️ DAY変更</button>
+    </div>
+  </div>
+
+  <div class="date-picker-wrap">
+    <span class="date-picker-label">📅 記録日</span>
+    <input type="date" id="entry-date">
+  </div>
+
+  <!-- 事実と解釈フォーム -->
+  <div id="form-jiji">
+
+    <!-- 1. 出来事 -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num">1</div>
+        <div>
+          <div class="field-label">出来事</div>
+          <div class="field-hint">何があった？何にモヤモヤした？</div>
+        </div>
+      </div>
+      <textarea id="dekigoto" rows="4" placeholder="例：夫が話を聞いてくれなかった"></textarea>
+      <div class="kotz">💡 ポイント：まずは何も考えずあったことをここに書こう</div>
+    </div>
+
+    <!-- 2. 感情 -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num">2</div>
+        <div>
+          <div class="field-label">感情</div>
+          <div class="field-hint">何が嫌だった？どんな気持ちだった？</div>
+        </div>
+      </div>
+      <textarea id="emotion" rows="4" placeholder="例：私はいつも聞いてあげてるのに！
+無視されて悲しかった
+なんで私ばっかり…"></textarea>
+      <div class="kotz">💡 文句でも怒りでも、そのまま書いてOK。まず全部出そう</div>
+    </div>
+
+    <!-- シャッターボタン -->
+    <div class="shutter-wrap" id="shutter-wrap">
+      <button class="shutter-btn" id="shutter-btn" onclick="triggerShutter()">
+        <span class="shutter-icon">🔒</span>
+        <span class="shutter-label">シャッターを下ろす</span>
+        <span class="shutter-arrow">▼</span>
+      </button>
+      <div class="shutter-msg" id="shutter-msg">
+        <div class="shutter-msg-inner">
+          <div class="shutter-msg-title">ここから先<br>相手に矢印は向けない</div>
+          <div class="shutter-msg-sub">自分の中にあるものだけを見ていこう</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 事実 -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num">3</div>
+        <div>
+          <div class="field-label">事実</div>
+          <div class="field-hint">感情を抜いたら、何が起きてた？</div>
+        </div>
+      </div>
+      <textarea id="fact" rows="4" placeholder="例：夫はスマホを見ながら「うん」と言った"></textarea>
+      <div class="kotz">💡 カメラで撮ったような映像で切り取ろう<br>感情・判断・想像は入れない。時間・言葉・行動だけ</div>
+    </div>
+
+    <!-- 4. 解釈 -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num">4</div>
+        <div>
+          <div class="field-label">解釈</div>
+          <div class="field-hint">私はそれをどう受け取った？どう捉えた？</div>
+        </div>
+      </div>
+      <textarea id="kaishaku" rows="4" placeholder="例：私は、無視されたと思った
+私は、私に興味がないんだと思った"></textarea>
+      <div class="kotz">💡 「私は〇〇と思った／感じた」の形で書こう<br>相手の話ではなく、私がどう受け取ったか</div>
+    </div>
+
+    <!-- 5. 前提 -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num">5</div>
+        <div>
+          <div class="field-label">前提（思い込み）</div>
+          <div class="field-hint">なぜ私はそう受け取るのか？どこから来てる？</div>
+        </div>
+      </div>
+      <textarea id="belief" rows="3" placeholder="例：「私の話は聞いてもらえない」という思い込みがある"></textarea>
+      <div class="kotz">💡 どんな経験（過去）や思い込みが影響していると思う？<br>どうせ〇〇だ　いつも私は〇〇　〇〇すべき</div>
+    </div>
+
+    <!-- 6. 本当はどうしたかった？ -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num">6</div>
+        <div>
+          <div class="field-label">本当はどうしたかった？</div>
+          <div class="field-hint">私は何を我慢した？</div>
+        </div>
+      </div>
+      <textarea id="honne" rows="3" placeholder="例：「ちゃんと目を見て話を聞いてほしかった」"></textarea>
+      <div class="kotz">💡 「本当は〇〇したかった／してほしかった」<br>何を大切にしたかった？どうなることを諦めた？</div>
+    </div>
+
+    <!-- 7. 気づき・行動 -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num" style="background:#EDF5F1;color:#7A9E8E">✦</div>
+        <div>
+          <div class="field-label">気づき・行動</div>
+          <div class="field-hint">気づいたこと＋できる小さな一歩</div>
+        </div>
+      </div>
+      <textarea id="insight" rows="4" placeholder="例：また「無視された」と解釈してたことに気づいた。まず自分で自分の話をちゃんと聴いてみよう"></textarea>
+      <div class="kotz">💡 大きく変えようとしなくていい。自分の中でできることからでOK</div>
+    </div>
+
+  </div><!-- /form-jiji -->
+
+  <!-- G&Nフォーム -->
+  <div id="form-gn" style="display:none">
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num green">1</div>
+        <div>
+          <div class="field-label">できたこと</div>
+          <div class="field-hint">今日できたこと、自分を大切にできたこと、自分で決めて選択できたこと</div>
+        </div>
+      </div>
+      <textarea class="green" id="gn-dekita" placeholder="例：朝ごはん作った▶朝ごはんをつくることができた&#10;旦那にお願いした▶旦那にお願いする選択ができた&#10;ジャーナリングした▶自分の気持ちに向き合うことができた" rows="4"></textarea>
+    </div>
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num green">2</div>
+        <div>
+          <div class="field-label">気づき</div>
+          <div class="field-hint">今日気づいたこと、発見したこと（自分の気持ち、何に心が動くのか）</div>
+        </div>
+      </div>
+      <textarea class="green" id="gn-kizuki" placeholder="例：毎日当たり前に作ってる朝ごはんだけど、できたこととと思うと当たり前じゃないんだなと思った&#10;どうせ断られると思って頼まなかったけど、勇気を出したらやってくれた" rows="4"></textarea>
+    </div>
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num green">3</div>
+        <div>
+          <div class="field-label">感謝</div>
+          <div class="field-hint">今日感謝したいこと、人、瞬間</div>
+        </div>
+      </div>
+      <textarea class="green" id="gn-kansha" placeholder="例：当たり前に日々が今日も送れたことに感謝&#10;嫌な顔せずゴミ出ししてくれた夫にありがとう&#10;自分を大切にした私にありがとう♡" rows="4"></textarea>
+    </div>
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-num green">✦</div>
+        <div>
+          <div class="field-label">自由欄</div>
+          <div class="field-hint">アファメーション・決意・今日の一言など</div>
+        </div>
+      </div>
+      <textarea class="green" id="gn-free" placeholder="例：私は愛される存在だ&#10;今日も自分を選んだ私、えらい♡" rows="4"></textarea>
+    </div>
+  </div><!-- /form-gn -->
+
+</div><!-- /view-write -->
+
+<!-- 履歴ビュー -->
+<div class="view" id="view-history">
+  <div id="history-list"></div>
+  <div style="height:80px"></div>
+</div>
+
+<!-- 詳細ビュー -->
+<div class="view" id="view-detail">
+  <div class="detail-header">
+    <button class="back-btn" onclick="showView('history')">← 戻る</button>
+    <div class="detail-date" id="detail-date"></div>
+  </div>
+  <div id="detail-content"></div>
+  <div class="detail-actions">
+    <button class="btn-del"       onclick="deleteEntry()">削除</button>
+    <button class="btn-edit"      onclick="editEntry()">編集</button>
+    <button class="btn-line-small" onclick="shareToLINE(currentEntry)">LINEに送る</button>
+  </div>
+  <div style="height:40px"></div>
+</div>
+
+<!-- アクションボタン -->
+<div class="actions" id="write-actions">
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-save" style="flex:1" onclick="saveEntry()">💾 保存する</button>
+    <button class="btn btn-line" style="flex:1" onclick="saveAndShareLINE()">📲 LINEに送る</button>
+  </div>
+  <button class="btn btn-secondary" onclick="clearForm()">クリア</button>
+</div>
+
+<!-- DAY設定モーダル -->
+<div class="modal-overlay" id="day-modal">
+  <div class="modal">
+    <h3>📅 今日は何日目？</h3>
+    <p>数字を入れると開始日を自動で計算するよ。</p>
+    <input type="number" id="day-input" placeholder="例：300" min="1">
+    <button class="modal-btn" onclick="saveDayNumber()">保存する</button>
+  </div>
+</div>
+
+<!-- ログイン画面 -->
+<div id="login-screen" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:10000; overflow-y:auto; padding:40px 20px;">
+  <div style="max-width:380px; margin:0 auto;">
+    <div style="text-align:center; margin-bottom:32px;">
+      <div style="font-size:40px; margin-bottom:12px;">🌸</div>
+      <div style="font-size:22px; font-weight:700; color:var(--dark);">YUMIコン ワークアプリ</div>
+      <div style="font-size:13px; color:var(--mid); margin-top:8px;">ログインするとPCとスマホで記録が共有されるよ</div>
+    </div>
+    <div id="login-error" style="display:none; background:#FEE2E2; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#DC2626;"></div>
+    <div style="background:var(--card); border-radius:16px; padding:24px; box-shadow:0 2px 12px rgba(60,52,48,0.08);">
+      <div id="login-mode-tabs" style="display:flex; gap:8px; margin-bottom:20px;">
+        <button onclick="switchLoginMode('login')" id="tab-login" style="flex:1; padding:8px; border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; background:var(--accent); color:white;">ログイン</button>
+        <button onclick="switchLoginMode('signup')" id="tab-signup" style="flex:1; padding:8px; border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; background:var(--accent-light); color:var(--accent);">新規登録</button>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:12px; font-weight:600; color:var(--mid); margin-bottom:6px;">ニックネーム（英数字）</div>
+        <input id="login-email" type="text" placeholder="例：yamada, micchy" autocomplete="username" autocorrect="off" autocapitalize="off" style="width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px; color:var(--dark); background:var(--bg); outline:none;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px; font-weight:600; color:var(--mid); margin-bottom:6px;">パスワード</div>
+        <input id="login-password" type="password" placeholder="6文字以上" style="width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px; color:var(--dark); background:var(--bg); outline:none;">
+      </div>
+      <button onclick="handleAuth()" id="login-btn" style="width:100%; padding:14px; background:var(--accent); color:white; border:none; border-radius:12px; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer;">ログイン</button>
+      <div id="login-note" style="text-align:center; font-size:12px; color:var(--mid); margin-top:14px;">次回からは自動でログインされるよ♡</div>
+    </div>
+    <div style="text-align:center; margin-top:20px;">
+      <button onclick="skipLogin()" style="background:none; border:none; font-family:inherit; font-size:13px; color:var(--light); cursor:pointer; text-decoration:underline;">今はスキップ（このデバイスだけで使う）</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // Supabase 初期化
+  const SUPABASE_URL  = 'https://sjpnzrbfgtisrhtthwyu.supabase.co';
+  const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqcG56cmJmZ3Rpc3JodHRod3l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyODU2NzksImV4cCI6MjA5OTg2MTY3OX0.uONb3sy3z-NZJG1IXeuGCXp79JCdXCUejgd888m82Mc';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let supabaseUser  = null;
+  let loginMode     = 'login';
+
+  function switchLoginMode(mode) {
+    loginMode = mode;
+    const isLogin = mode === 'login';
+    document.getElementById('tab-login').style.background  = isLogin ? 'var(--accent)' : 'var(--accent-light)';
+    document.getElementById('tab-login').style.color       = isLogin ? 'white' : 'var(--accent)';
+    document.getElementById('tab-signup').style.background = isLogin ? 'var(--accent-light)' : 'var(--accent)';
+    document.getElementById('tab-signup').style.color      = isLogin ? 'var(--accent)' : 'white';
+    document.getElementById('login-btn').textContent       = isLogin ? 'ログイン' : '新規登録';
+    document.getElementById('login-note').textContent      = isLogin ? '次回からは自動でログインされるよ♡' : 'アカウントを作って記録を同期しよう';
+    document.getElementById('login-error').style.display  = 'none';
+  }
+
+  async function handleAuth() {
+    const raw      = document.getElementById('login-email').value.trim();
+    const email    = raw.includes('@') ? raw : raw.toLowerCase().replace(/\s+/g, '') + '@yumikon.app';
+    const password = document.getElementById('login-password').value;
+    const errEl    = document.getElementById('login-error');
+    errEl.style.display = 'none';
+    if (!raw || !password) { errEl.textContent = 'ニックネームとパスワードを入力してね'; errEl.style.display = 'block'; return; }
+
+    const btn = document.getElementById('login-btn');
+    btn.textContent = '処理中...'; btn.disabled = true;
+
+    let result;
+    if (loginMode === 'login') {
+      result = await sb.auth.signInWithPassword({ email, password });
+    } else {
+      result = await sb.auth.signUp({ email, password });
+    }
+    btn.disabled = false;
+    btn.textContent = loginMode === 'login' ? 'ログイン' : '新規登録';
+
+    if (result.error) {
+      let msg = result.error.message;
+      if (msg.includes('Invalid login')) msg = 'ニックネームかパスワードが違うよ';
+      if (msg.includes('already registered')) msg = 'そのニックネームはすでに登録済みだよ。ログインしてね';
+      if (msg.includes('invalid format') || msg.includes('Unable to validate email')) msg = 'ニックネームの形式が正しくないよ（英数字のみ）';
+      if (msg.includes('Password should be')) msg = 'パスワードは6文字以上にしてね';
+      errEl.textContent = msg; errEl.style.display = 'block';
+      return;
+    }
+
+    if (loginMode === 'signup' && result.data?.user && !result.data.session) {
+      errEl.style.background = '#D1FAE5'; errEl.style.color = '#065F46';
+      errEl.textContent = '確認メールを送ったよ！メールを確認してね';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    supabaseUser = result.data.user;
+    document.getElementById('login-screen').style.display = 'none';
+    // startDateをSupabaseメタデータから復元
+    const savedStart = supabaseUser.user_metadata?.startDate;
+    if (savedStart) {
+      localStorage.setItem('startDate', savedStart);
+    } else if (loginMode === 'signup' && !localStorage.getItem('startDate')) {
+      openDayModal();
+    }
+    calcDay();
+    await syncFromSupabase();
+    renderHistory();
+    updateLoginStatus();
+  }
+
+  function skipLogin() {
+    document.getElementById('login-screen').style.display = 'none';
+  }
+
+  async function syncFromSupabase() {
+    if (!supabaseUser) return;
+
+    const local = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    // アップロード済みIDを管理（削除との区別に使う）
+    const uploadedIds = new Set(JSON.parse(localStorage.getItem('jijiUploadedIds') || '[]'));
+
+    // Supabaseの現在のIDを取得
+    const { data: remoteRows } = await sb.from('entries').select('data').eq('user_id', supabaseUser.id);
+    const remoteIds = new Set((remoteRows || []).map(r => String(r.data?.id)).filter(Boolean));
+
+    // Supabaseに存在するIDはアップロード済みとして記録（初回移行対応）
+    for (const id of remoteIds) uploadedIds.add(id);
+
+    // ローカルにあってアップロード未済のものだけ送る（削除済みは再送しない）
+    for (const entry of local) {
+      if (entry.id && !uploadedIds.has(String(entry.id))) {
+        const { error } = await sb.from('entries').insert({ user_id: supabaseUser.id, mode: entry.type || 'gn', data: entry });
+        if (!error) uploadedIds.add(String(entry.id));
+      }
+    }
+    localStorage.setItem('jijiUploadedIds', JSON.stringify([...uploadedIds]));
+
+    // Supabaseの全件を取得してlocalStorageを上書き（他端末の削除も反映）
+    const { data: allRows, error } = await sb.from('entries').select('data').eq('user_id', supabaseUser.id);
+    if (error) return;
+    const allEntries = (allRows || []).map(r => r.data).filter(Boolean);
+    allEntries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+    localStorage.setItem('jijiEntries', JSON.stringify(allEntries));
+  }
+
+  async function saveToSupabase(entry) {
+    if (!supabaseUser) return;
+    const { error } = await sb.from('entries').insert({ user_id: supabaseUser.id, mode: entry.type || 'gn', data: entry });
+    if (!error) {
+      const uploadedIds = new Set(JSON.parse(localStorage.getItem('jijiUploadedIds') || '[]'));
+      uploadedIds.add(String(entry.id));
+      localStorage.setItem('jijiUploadedIds', JSON.stringify([...uploadedIds]));
+    }
+  }
+
+  async function deleteFromSupabase(entryId) {
+    if (!supabaseUser || !entryId) return;
+    const { error } = await sb.from('entries')
+      .delete()
+      .eq('user_id', supabaseUser.id)
+      .filter('data->>id', 'eq', String(entryId));
+    if (error) showToast('⚠️ 削除エラー: ' + error.message);
+  }
+
+  function updateLoginStatus() {
+    const el   = document.getElementById('login-status');
+    const text = document.getElementById('login-status-text');
+    if (!el || !text) return;
+    if (supabaseUser) {
+      text.textContent = '🔗 ' + (supabaseUser.email || '').replace('@yumikon.app', '');
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  async function manualSync() {
+    if (!supabaseUser) { showToast('ログインしてね'); return; }
+    showToast('同期中...');
+    await syncFromSupabase();
+    renderHistory();
+    showToast('✅ 同期完了！');
+  }
+
+  async function logout() {
+    await sb.auth.signOut();
+    supabaseUser = null;
+    updateLoginStatus();
+    document.getElementById('login-screen').style.display = 'block';
+  }
+
+  // 起動時: セッション確認
+  (async () => {
+    const { data } = await sb.auth.getSession();
+    if (data?.session?.user) {
+      supabaseUser = data.session.user;
+      await syncFromSupabase();
+    } else {
+      document.getElementById('login-screen').style.display = 'block';
+    }
+    // 初期化（ログイン画面表示中でも実行）
+    showView('write');
+    document.getElementById('write-actions').style.display = 'flex';
+    document.getElementById('write-actions').style.flexDirection = 'column';
+    setMode('gn');
+    restoreDraft();
+    renderHistory();
+    updateLoginStatus();
+  })();
+
+  let currentEntry = null;
+  let currentId    = null;
+  let currentMode  = 'gn';
+  let editingId    = null;
+
+  const DRAFT_KEY = 'jijiDraft';
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // 今日の日付
+  const now = new Date();
+  const todayStr = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0');
+  document.getElementById('entry-date').value = todayStr;
+
+  function parseLocalDate(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function calcDay() {
+    const saved = localStorage.getItem('startDate');
+    if (!saved) { document.getElementById('day-count').textContent = 'DAY ?'; return; }
+    const start = parseLocalDate(saved);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff  = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1;
+    document.getElementById('day-count').textContent = 'DAY ' + diff;
+  }
+  calcDay();
+
+  function openDayModal() {
+    const saved = localStorage.getItem('startDate');
+    if (saved) {
+      const start = new Date(saved);
+      const diff  = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
+      document.getElementById('day-input').value = diff;
+    } else {
+      document.getElementById('day-input').value = '';
+    }
+    document.getElementById('day-modal').classList.add('show');
+  }
+
+  async function saveDayNumber() {
+    const val = parseInt(document.getElementById('day-input').value);
+    if (!val || val < 1) return;
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    todayMidnight.setDate(todayMidnight.getDate() - (val - 1));
+    const startStr = todayMidnight.getFullYear() + '-' +
+      String(todayMidnight.getMonth()+1).padStart(2,'0') + '-' +
+      String(todayMidnight.getDate()).padStart(2,'0');
+    localStorage.setItem('startDate', startStr);
+    if (supabaseUser) {
+      await sb.auth.updateUser({ data: { startDate: startStr } });
+    }
+    document.getElementById('day-modal').classList.remove('show');
+    calcDay();
+    showToast('✅ DAY' + val + 'で保存しました！');
+  }
+
+  if (!localStorage.getItem('startDate') && !supabaseUser) openDayModal();
+
+  // モード切替
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('form-jiji').style.display = mode === 'jiji' ? 'block' : 'none';
+    document.getElementById('form-gn').style.display   = mode === 'gn'   ? 'block' : 'none';
+    document.getElementById('mode-jiji').className = 'mode-tab' + (mode === 'jiji' ? ' active-jiji' : '');
+    document.getElementById('mode-gn').className   = 'mode-tab' + (mode === 'gn'   ? ' active-gn'   : '');
+    const badge = document.getElementById('day-count');
+    badge.className = 'day-badge' + (mode === 'gn' ? ' green' : '');
+    document.body.className = 'mode-' + mode;
+  }
+
+  function showView(v) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active', 'active-green'));
+    document.getElementById('view-' + v).classList.add('active');
+    document.getElementById('write-actions').style.display = v === 'write' ? 'flex' : 'none';
+    document.getElementById('write-actions').style.flexDirection = 'column';
+    if (v === 'history') {
+      document.getElementById('tab-history').classList.add('active');
+      renderHistory();
+    } else if (v === 'write') {
+      document.getElementById('tab-write').classList.add('active');
+    }
+  }
+
+  function getDay(dateStr) {
+    const saved = localStorage.getItem('startDate');
+    if (!saved) return null;
+    const d      = new Date(dateStr);
+    const dLocal = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const start  = parseLocalDate(saved);
+    return Math.floor((dLocal - start) / (1000 * 60 * 60 * 24)) + 1;
+  }
+
+  function buildEntry() {
+    const selectedDate = document.getElementById('entry-date').value || todayStr;
+    const [y, m, d]    = selectedDate.split('-').map(Number);
+    const entryDate    = new Date(y, m - 1, d, 12, 0, 0).toISOString();
+
+    if (currentMode === 'gn') {
+      return {
+        id: Date.now(), date: entryDate, type: 'gn',
+        dekita: document.getElementById('gn-dekita').value.trim(),
+        kizuki: document.getElementById('gn-kizuki').value.trim(),
+        kansha: document.getElementById('gn-kansha').value.trim(),
+        free:   document.getElementById('gn-free').value.trim(),
+      };
+    }
+    return {
+      id: Date.now(), date: entryDate, type: 'jiji',
+      dekigoto: document.getElementById('dekigoto').value.trim(),
+      emotion:  document.getElementById('emotion').value.trim(),
+      fact:     document.getElementById('fact').value.trim(),
+      kaishaku: document.getElementById('kaishaku').value.trim(),
+      belief:   document.getElementById('belief').value.trim(),
+      honne:    document.getElementById('honne').value.trim(),
+      insight:  document.getElementById('insight').value.trim(),
+    };
+  }
+
+  async function saveEntry() {
+    const entry   = buildEntry();
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    if (editingId !== null) {
+      entries[editingId] = { ...entries[editingId], ...entry, id: entries[editingId].id };
+      editingId = null;
+      showToast('✅ 更新しました！');
+    } else {
+      entries.unshift(entry);
+      showToast('✅ 保存しました！');
+      saveToSupabase(entry);
+    }
+    localStorage.setItem('jijiEntries', JSON.stringify(entries));
+    clearForm();
+    renderHistory();
+  }
+
+  async function saveAndShareLINE() {
+    const entry   = buildEntry();
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    if (editingId !== null) {
+      entries[editingId] = { ...entries[editingId], ...entry, id: entries[editingId].id };
+      editingId = null;
+    } else {
+      entries.unshift(entry);
+      saveToSupabase(entry);
+    }
+    localStorage.setItem('jijiEntries', JSON.stringify(entries));
+    clearForm();
+    showToast('✅ 保存してLINEに送ります！');
+    setTimeout(() => shareToLINE(entry), 800);
+    setTimeout(() => showCheerToast(), 2200);
+  }
+
+  function buildText(entry) {
+    const d      = new Date(entry.date);
+    const day    = getDay(entry.date);
+    const dayStr = day ? 'DAY' + day + ' ' : '';
+    const dateStr = d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate();
+
+    if (entry.type === 'gn') {
+      let text = `【G&N】${dayStr}${dateStr}\n\n`;
+      if (entry.dekita) text += `✅ できたこと\n${entry.dekita}\n\n`;
+      if (entry.kizuki) text += `💡 気づき\n${entry.kizuki}\n\n`;
+      if (entry.kansha) text += `🙏 感謝\n${entry.kansha}\n\n`;
+      if (entry.free)   text += `✨ 自由欄\n${entry.free}\n\n`;
+      return text.trimEnd();
+    }
+
+    let text = `【事実と解釈ワーク】${dayStr}${dateStr}\n\n`;
+    if (entry.dekigoto) text += `📌 出来事\n${entry.dekigoto}\n\n`;
+    if (entry.emotion)  text += `💗 感情\n${entry.emotion}\n\n`;
+    text += `🔍 ── 俯瞰 ──\n\n`;
+    if (entry.fact)     text += `✅ 事実\n${entry.fact}\n\n`;
+    if (entry.kaishaku) text += `💭 解釈\n${entry.kaishaku}\n\n`;
+    if (entry.belief)   text += `🔍 前提・思い込み\n${entry.belief}\n\n`;
+    if (entry.honne)    text += `💙 本当はどうしたかった？\n${entry.honne}\n\n`;
+    if (entry.insight)  text += `✨ 気づき・行動\n${entry.insight}\n\n`;
+    return text.trimEnd();
+  }
+
+  function shareToLINE(entry) {
+    const text     = buildText(entry);
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.open('https://line.me/R/share?text=' + encodeURIComponent(text), '_blank');
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('📋 コピーしました！LINEに貼り付けてね');
+      });
+    }
+  }
+
+  function clearForm() {
+    if (currentMode === 'gn') {
+      ['gn-dekita','gn-kizuki','gn-kansha','gn-free'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+    } else {
+      ['dekigoto','emotion','fact','kaishaku','belief','honne','insight'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      resetShutter();
+    }
+    localStorage.removeItem(DRAFT_KEY);
+  }
+
+  // 履歴
+  function renderHistory() {
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const list    = document.getElementById('history-list');
+    if (!entries.length) {
+      list.innerHTML = '<div class="history-empty">まだ記録がありません。<br>「書く」タブからワークを始めましょう！</div>';
+      return;
+    }
+    list.innerHTML = entries.map((e, i) => {
+      const d       = new Date(e.date);
+      const day     = getDay(e.date);
+      const dayStr  = day ? 'DAY' + day + ' · ' : '';
+      const dateStr = d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+      const isGn    = e.type === 'gn';
+      const title   = isGn ? (e.dekita || e.kizuki || e.kansha || '（内容なし）')
+                            : (e.dekigoto || e.fact || '（内容なし）');
+      const preview = isGn ? (e.kansha  ? '🙏 ' + e.kansha  : '')
+                            : (e.insight ? '✨ ' + e.insight : '');
+      return `
+        <div class="history-item ${isGn ? 'gn' : 'jiji'}" onclick="showDetail(${i})">
+          <div class="history-meta">
+            <span class="history-date">${dayStr}${dateStr}</span>
+            <span class="history-type-badge ${isGn ? 'badge-gn' : 'badge-jiji'}">${isGn ? 'G&N' : '事実と解釈'}</span>
+          </div>
+          <div class="history-title">${title}</div>
+          ${preview ? `<div class="history-preview">${preview}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showDetail(i) {
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    entries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+    const e       = entries[i];
+    currentEntry  = e;
+    currentId     = i;
+
+    const d   = new Date(e.date);
+    const day = getDay(e.date);
+    document.getElementById('detail-date').textContent =
+      (day ? 'DAY' + day + '  ' : '') +
+      d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+
+    let sections;
+    if (e.type === 'gn') {
+      sections = [
+        { label: 'できたこと', value: e.dekita },
+        { label: '気づき',     value: e.kizuki },
+        { label: '感謝',       value: e.kansha },
+        { label: '自由欄',     value: e.free   },
+      ];
+    } else {
+      sections = [
+        { label: '出来事',              value: e.dekigoto },
+        { label: '感情',                value: e.emotion  },
+        { label: '事実',                value: e.fact     },
+        { label: '解釈',                value: e.kaishaku },
+        { label: '前提・思い込み',      value: e.belief   },
+        { label: '本当はどうしたかった？', value: e.honne  },
+        { label: '気づき・行動',        value: e.insight  },
+      ];
+    }
+
+    document.getElementById('detail-content').innerHTML = sections
+      .filter(s => s.value)
+      .map(s => `
+        <div class="detail-section">
+          <div class="detail-label">${s.label}</div>
+          <div class="detail-text">${s.value}</div>
+        </div>
+      `).join('');
+
+    showView('detail');
+  }
+
+  function editEntry() {
+    const e    = currentEntry;
+    const mode = e.type || 'jiji';
+    setMode(mode);
+    showView('write');
+
+    const d       = new Date(e.date);
+    const dateStr = d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0');
+    document.getElementById('entry-date').value = dateStr;
+
+    if (mode === 'gn') {
+      document.getElementById('gn-dekita').value = e.dekita || '';
+      document.getElementById('gn-kizuki').value = e.kizuki || '';
+      document.getElementById('gn-kansha').value = e.kansha || '';
+      document.getElementById('gn-free').value   = e.free   || '';
+    } else {
+      document.getElementById('dekigoto').value = e.dekigoto || '';
+      document.getElementById('emotion').value  = e.emotion  || '';
+      document.getElementById('fact').value     = e.fact     || '';
+      document.getElementById('kaishaku').value = e.kaishaku || '';
+      document.getElementById('belief').value   = e.belief   || '';
+      document.getElementById('honne').value    = e.honne    || '';
+      document.getElementById('insight').value  = e.insight  || '';
+    }
+    editingId = currentId;
+    showToast('✏️ 編集モード。修正して保存してね');
+  }
+
+  async function deleteEntry() {
+    if (!confirm('この記録を削除しますか？')) return;
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    const targetId = currentEntry?.id;
+    const idx = targetId ? entries.findIndex(e => e.id === targetId) : -1;
+    if (idx !== -1) entries.splice(idx, 1);
+    localStorage.setItem('jijiEntries', JSON.stringify(entries));
+    if (targetId) await deleteFromSupabase(targetId);
+    showView('history');
+  }
+
+  // 自動保存（下書き）
+  function saveDraft() {
+    const draft = {
+      mode:     currentMode,
+      date:     document.getElementById('entry-date').value,
+      dekigoto: document.getElementById('dekigoto').value,
+      emotion:  document.getElementById('emotion').value,
+      fact:     document.getElementById('fact').value,
+      kaishaku: document.getElementById('kaishaku').value,
+      belief:   document.getElementById('belief').value,
+      honne:    document.getElementById('honne').value,
+      insight:  document.getElementById('insight').value,
+      dekita:   document.getElementById('gn-dekita').value,
+      kizuki:   document.getElementById('gn-kizuki').value,
+      kansha:   document.getElementById('gn-kansha').value,
+      free:     document.getElementById('gn-free').value,
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }
+
+  function restoreDraft() {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.mode === 'gn' || d.mode === 'jiji') setMode(d.mode);
+    if (d.date) document.getElementById('entry-date').value = d.date;
+    ['dekigoto','emotion','fact','kaishaku','belief','honne','insight'].forEach(id => {
+      if (d[id] !== undefined) document.getElementById(id).value = d[id];
+    });
+    ['dekita','kizuki','kansha','free'].forEach(id => {
+      if (d[id] !== undefined) document.getElementById('gn-' + id).value = d[id];
+    });
+  }
+
+  document.querySelectorAll('textarea').forEach(ta => {
+    ta.addEventListener('input', saveDraft);
+    ta.addEventListener('focus', () => {
+      document.getElementById('write-actions').style.display = 'none';
+    });
+    ta.addEventListener('blur', () => {
+      if (document.getElementById('view-write').classList.contains('active')) {
+        document.getElementById('write-actions').style.display = 'flex';
+        document.getElementById('write-actions').style.flexDirection = 'column';
+      }
+    });
+  });
+
+  function triggerShutter() {
+    const btn = document.getElementById('shutter-btn');
+    const msg = document.getElementById('shutter-msg');
+    msg.classList.add('show');
+    btn.classList.add('open');
+    btn.querySelector('.shutter-label').textContent = 'シャッター閉じました';
+    btn.querySelector('.shutter-icon').textContent = '🔒';
+    btn.querySelector('.shutter-arrow').textContent = '';
+    btn.disabled = true;
+    btn.style.cursor = 'default';
+    btn.style.opacity = '0.85';
+  }
+
+  function showCheerToast() {
+    const overlay = document.createElement('div');
+    overlay.className = 'cheer-overlay';
+    overlay.innerHTML = `
+      <div class="cheer-toast">
+        <div class="cheer-toast-text">今日も完璧で<br>最高だったね♡</div>
+        <div class="cheer-toast-sub">向き合った自分を褒めてね♡</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.classList.add('show'), 50);
+    setTimeout(() => {
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 500);
+    }, 3000);
+  }
+
+  function resetShutter() {
+    const btn = document.getElementById('shutter-btn');
+    const msg = document.getElementById('shutter-msg');
+    if (!btn || !msg) return;
+    msg.classList.remove('show');
+    btn.classList.remove('open');
+    btn.querySelector('.shutter-label').textContent = 'シャッターを下ろす';
+    btn.querySelector('.shutter-icon').textContent = '🔒';
+    btn.querySelector('.shutter-arrow').textContent = '▼';
+    btn.disabled = false;
+    btn.style.cursor = 'pointer';
+    btn.style.opacity = '1';
+  }
+
+</script>
+</body>
+</html>

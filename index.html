@@ -1143,13 +1143,13 @@
       ];
     } else {
       sections = [
-        { label: '出来事',              value: e.dekigoto },
-        { label: '感情',                value: e.emotion  },
-        { label: '事実',                value: e.fact     },
-        { label: '解釈',                value: e.kaishaku },
-        { label: '前提・思い込み',      value: e.belief   },
-        { label: '本当はどうしたかった？', value: e.honne  },
-        { label: '気づき・行動',        value: e.insight  },
+        { label: '出来事',              value: e.dekigoto || e.moya    },
+        { label: '感情',                value: e.emotion               },
+        { label: '事実',                value: e.fact                  },
+        { label: '解釈',                value: e.kaishaku              },
+        { label: '前提・思い込み',      value: e.belief                },
+        { label: '本当はどうしたかった？', value: e.honne || e.purpose },
+        { label: '気づき・行動',        value: e.insight || e.action   },
       ];
     }
 

@@ -1045,8 +1045,8 @@
     localStorage.setItem('jijiEntries', JSON.stringify(entries));
     clearForm();
     showToast('✅ 保存してLINEに送ります！');
-    setTimeout(() => shareToLINE(entry), 800);
-    setTimeout(() => showCheerToast(), 2200);
+    showCheerToast();
+    setTimeout(() => shareToLINE(entry), 2500);
   }
 
   function buildText(entry) {

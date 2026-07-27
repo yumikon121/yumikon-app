@@ -1085,9 +1085,7 @@
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
     const encoded  = encodeURIComponent(text);
     if (isMobile) {
-      // 長すぎる場合は末尾を切って送る（LINEは約2000文字まで）
-      const safe = encoded.length <= 2000 ? encoded : encodeURIComponent(text.slice(0, 600) + '\n\n…（続きはアプリで確認してね）');
-      window.open('https://line.me/R/share?text=' + safe, '_blank');
+      window.open('https://line.me/R/share?text=' + encoded, '_blank');
     } else {
       navigator.clipboard.writeText(text).then(() => {
         showToast('📋 コピーしました！LINEに貼り付けてね');

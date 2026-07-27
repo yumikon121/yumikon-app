@@ -1005,8 +1005,9 @@
     const entry   = buildEntry();
     const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
     if (editingId !== null) {
-      const targetId = entries[editingId]?.id;
-      entries[editingId] = { ...entries[editingId], ...entry, id: entries[editingId].id };
+      const idx = entries.findIndex(e => e.id === editingId);
+      const targetId = editingId;
+      if (idx !== -1) entries[idx] = { ...entries[idx], ...entry, id: targetId };
       editingId = null;
       localStorage.setItem('jijiEntries', JSON.stringify(entries));
       // 編集時はSupabaseの該当レコードを削除して再登録
@@ -1029,8 +1030,9 @@
     const entry   = buildEntry();
     const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
     if (editingId !== null) {
-      const targetId = entries[editingId]?.id;
-      entries[editingId] = { ...entries[editingId], ...entry, id: entries[editingId].id };
+      const idx = entries.findIndex(e => e.id === editingId);
+      const targetId = editingId;
+      if (idx !== -1) entries[idx] = { ...entries[idx], ...entry, id: targetId };
       editingId = null;
       if (supabaseUser && targetId) {
         await deleteFromSupabase(targetId);
@@ -1203,7 +1205,7 @@
       document.getElementById('honne').value    = e.honne    || '';
       document.getElementById('insight').value  = e.insight  || '';
     }
-    editingId = currentId;
+    editingId = e.id;
     showToast('✏️ 編集モード。修正して保存してね');
   }
 
@@ -1255,6 +1257,16 @@
   document.querySelectorAll('textarea').forEach(ta => {
     ta.addEventListener('input', saveDraft);
   });
+
+  // キーボード表示時にボタンが被さらないよう位置を調整
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      const actions = document.querySelector('.actions');
+      if (!actions) return;
+      const keyboardHeight = window.innerHeight - window.visualViewport.height;
+      actions.style.bottom = Math.max(0, keyboardHeight) + 'px';
+    });
+  }
 
   function triggerShutter() {
     const btn = document.getElementById('shutter-btn');

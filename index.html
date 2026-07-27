@@ -1254,15 +1254,6 @@
 
   document.querySelectorAll('textarea').forEach(ta => {
     ta.addEventListener('input', saveDraft);
-    ta.addEventListener('focus', () => {
-      document.getElementById('write-actions').style.display = 'none';
-    });
-    ta.addEventListener('blur', () => {
-      if (document.getElementById('view-write').classList.contains('active')) {
-        document.getElementById('write-actions').style.display = 'flex';
-        document.getElementById('write-actions').style.flexDirection = 'column';
-      }
-    });
   });
 
   function triggerShutter() {

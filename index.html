@@ -622,14 +622,14 @@
     </div>
   </div><!-- /form-gn -->
 
-<!-- アクションボタン（view-writeの中に入れる） -->
-<div class="actions" id="write-actions">
-  <div style="display:flex;gap:10px">
-    <button class="btn btn-save" style="flex:1" onclick="saveEntry()">💾 保存する</button>
-    <button class="btn btn-line" style="flex:1" onclick="saveAndShareLINE()">📲 LINEに送る</button>
+  <!-- アクションボタン -->
+  <div class="actions" id="write-actions">
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-save" style="flex:1" onclick="saveEntry()">💾 保存する</button>
+      <button class="btn btn-line" style="flex:1" onclick="saveAndShareLINE()">📲 LINEに送る</button>
+    </div>
+    <button class="btn btn-secondary" onclick="if(confirm('入力内容をクリアしますか？'))clearForm()">クリア</button>
   </div>
-  <button class="btn btn-secondary" onclick="if(confirm('入力内容をクリアしますか？'))clearForm()">クリア</button>
-</div>
 
 </div><!-- /view-write -->
 
@@ -1260,17 +1260,15 @@
 
   document.querySelectorAll('textarea').forEach(ta => {
     ta.addEventListener('input', saveDraft);
-  });
-
-  // キーボード表示時にボタンが被さらないよう位置を調整
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => {
-      const actions = document.querySelector('.actions');
-      if (!actions) return;
-      const keyboardHeight = window.innerHeight - window.visualViewport.height;
-      actions.style.bottom = Math.max(0, keyboardHeight) + 'px';
+    ta.addEventListener('focus', () => {
+      const actions = document.getElementById('write-actions');
+      if (actions) actions.style.display = 'none';
     });
-  }
+    ta.addEventListener('blur', () => {
+      const actions = document.getElementById('write-actions');
+      if (actions) actions.style.display = 'flex';
+    });
+  });
 
   function triggerShutter() {
     const btn = document.getElementById('shutter-btn');

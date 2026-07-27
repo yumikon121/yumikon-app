@@ -1262,29 +1262,17 @@
 
   document.querySelectorAll('textarea').forEach(ta => {
     ta.addEventListener('input', saveDraft);
-    ta.addEventListener('focus', () => {
-      const actions = document.getElementById('write-actions');
-      if (actions) actions.style.display = 'none';
-    });
-    ta.addEventListener('blur', () => {
-      setTimeout(() => {
-        const actions = document.getElementById('write-actions');
-        if (actions) { actions.style.display = 'flex'; actions.style.flexDirection = 'column'; }
-      }, 300);
-    });
   });
 
-  // visualViewportでキーボード閉じたときも確実に表示
+  // キーボード表示/非表示をvisualViewportで検出してボタンを切り替え
   if (window.visualViewport) {
-    let lastHeight = window.visualViewport.height;
+    const threshold = window.innerHeight * 0.25;
     window.visualViewport.addEventListener('resize', () => {
-      const newHeight = window.visualViewport.height;
-      if (newHeight > lastHeight + 100) {
-        // キーボードが閉じた
-        const actions = document.getElementById('write-actions');
-        if (actions) { actions.style.display = 'flex'; actions.style.flexDirection = 'column'; }
-      }
-      lastHeight = newHeight;
+      const actions = document.getElementById('write-actions');
+      if (!actions) return;
+      const keyboardOpen = (window.innerHeight - window.visualViewport.height) > threshold;
+      actions.style.display = keyboardOpen ? 'none' : 'flex';
+      if (!keyboardOpen) actions.style.flexDirection = 'column';
     });
   }
 

@@ -643,7 +643,7 @@
   <div class="detail-actions">
     <button class="btn-del"       onclick="deleteEntry()">削除</button>
     <button class="btn-edit"      onclick="editEntry()">編集</button>
-    <button class="btn-line-small" onclick="shareToLINE(currentEntry)">LINEに送る</button>
+    <button class="btn-line-small" onclick="showCheerToast(); setTimeout(() => shareToLINE(currentEntry), 2500)">LINEに送る</button>
   </div>
   <div style="height:40px"></div>
 </div>
@@ -1046,7 +1046,7 @@
     clearForm();
     showToast('✅ 保存してLINEに送ります！');
     showCheerToast();
-    setTimeout(() => shareToLINE(entry), 2500);
+    setTimeout(() => shareToLINE(entry), 3200);
   }
 
   function buildText(entry) {

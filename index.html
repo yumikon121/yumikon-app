@@ -622,6 +622,15 @@
     </div>
   </div><!-- /form-gn -->
 
+<!-- アクションボタン（view-writeの中に入れる） -->
+<div class="actions" id="write-actions">
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-save" style="flex:1" onclick="saveEntry()">💾 保存する</button>
+    <button class="btn btn-line" style="flex:1" onclick="saveAndShareLINE()">📲 LINEに送る</button>
+  </div>
+  <button class="btn btn-secondary" onclick="if(confirm('入力内容をクリアしますか？'))clearForm()">クリア</button>
+</div>
+
 </div><!-- /view-write -->
 
 <!-- 履歴ビュー -->
@@ -643,15 +652,6 @@
     <button class="btn-line-small" onclick="const w=window.open('','_blank'); showCheerToast(); setTimeout(() => shareToLINE(currentEntry, w), 3200)">LINEに送る</button>
   </div>
   <div style="height:40px"></div>
-</div>
-
-<!-- アクションボタン -->
-<div class="actions" id="write-actions">
-  <div style="display:flex;gap:10px">
-    <button class="btn btn-save" style="flex:1" onclick="saveEntry()">💾 保存する</button>
-    <button class="btn btn-line" style="flex:1" onclick="saveAndShareLINE()">📲 LINEに送る</button>
-  </div>
-  <button class="btn btn-secondary" onclick="if(confirm('入力内容をクリアしますか？'))clearForm()">クリア</button>
 </div>
 
 <!-- DAY設定モーダル -->

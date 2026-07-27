@@ -1064,26 +1064,33 @@
       return text.trimEnd();
     }
 
+    const dekigoto = entry.dekigoto || entry.moya || '';
+    const honne    = entry.honne    || entry.purpose || '';
+    const insight  = entry.insight  || entry.action  || '';
+
     let text = `【事実と解釈ワーク】${dayStr}${dateStr}\n\n`;
-    if (entry.dekigoto) text += `📌 出来事\n${entry.dekigoto}\n\n`;
+    if (dekigoto)       text += `📌 出来事\n${dekigoto}\n\n`;
     if (entry.emotion)  text += `💗 感情\n${entry.emotion}\n\n`;
     text += `🔍 ── 俯瞰 ──\n\n`;
     if (entry.fact)     text += `✅ 事実\n${entry.fact}\n\n`;
     if (entry.kaishaku) text += `💭 解釈\n${entry.kaishaku}\n\n`;
     if (entry.belief)   text += `🔍 前提・思い込み\n${entry.belief}\n\n`;
-    if (entry.honne)    text += `💙 本当はどうしたかった？\n${entry.honne}\n\n`;
-    if (entry.insight)  text += `✨ 気づき・行動\n${entry.insight}\n\n`;
+    if (honne)          text += `💙 本当はどうしたかった？\n${honne}\n\n`;
+    if (insight)        text += `✨ 気づき・行動\n${insight}\n\n`;
     return text.trimEnd();
   }
 
   function shareToLINE(entry) {
     const text     = buildText(entry);
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-      window.open('https://line.me/R/share?text=' + encodeURIComponent(text), '_blank');
+    const encoded  = encodeURIComponent(text);
+    if (isMobile && encoded.length <= 2000) {
+      window.open('https://line.me/R/share?text=' + encoded, '_blank');
     } else {
       navigator.clipboard.writeText(text).then(() => {
         showToast('📋 コピーしました！LINEに貼り付けてね');
+      }).catch(() => {
+        showToast('📋 LINEを開いて貼り付けてね');
       });
     }
   }

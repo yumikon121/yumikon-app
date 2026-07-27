@@ -856,6 +856,8 @@
     const { data } = await sb.auth.getSession();
     if (data?.session?.user) {
       supabaseUser = data.session.user;
+      const savedStart = supabaseUser.user_metadata?.startDate;
+      if (savedStart) localStorage.setItem('startDate', savedStart);
       await syncFromSupabase();
     } else {
       document.getElementById('login-screen').style.display = 'block';

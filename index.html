@@ -643,7 +643,7 @@
   <div class="detail-actions">
     <button class="btn-del"       onclick="deleteEntry()">削除</button>
     <button class="btn-edit"      onclick="editEntry()">編集</button>
-    <button class="btn-line-small" onclick="showCheerToast(); setTimeout(() => shareToLINE(currentEntry), 2500)">LINEに送る</button>
+    <button class="btn-line-small" onclick="const w=window.open('','_blank'); showCheerToast(); setTimeout(() => shareToLINE(currentEntry, w), 3200)">LINEに送る</button>
   </div>
   <div style="height:40px"></div>
 </div>
@@ -1045,8 +1045,9 @@
     localStorage.setItem('jijiEntries', JSON.stringify(entries));
     clearForm();
     showToast('✅ 保存してLINEに送ります！');
+    const lineWin = window.open('', '_blank');
     showCheerToast();
-    setTimeout(() => shareToLINE(entry), 3200);
+    setTimeout(() => shareToLINE(entry, lineWin), 3200);
   }
 
   function buildText(entry) {
@@ -1080,13 +1081,16 @@
     return text.trimEnd();
   }
 
-  function shareToLINE(entry) {
+  function shareToLINE(entry, lineWin) {
     const text     = buildText(entry);
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
     const encoded  = encodeURIComponent(text);
     if (isMobile) {
-      window.open('https://line.me/R/share?text=' + encoded, '_blank');
+      const url = 'https://line.me/R/share?text=' + encoded;
+      if (lineWin) { lineWin.location.href = url; }
+      else { window.open(url, '_blank'); }
     } else {
+      if (lineWin) lineWin.close();
       navigator.clipboard.writeText(text).then(() => {
         showToast('📋 コピーしました！LINEに貼り付けてね');
       }).catch(() => {

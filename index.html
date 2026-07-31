@@ -976,7 +976,6 @@
     String(now.getMonth()+1).padStart(2,'0') + '-' +
     String(now.getDate()).padStart(2,'0');
   document.getElementById('entry-date').value = todayStr;
-  renderWriteCalendar();
 
   function parseLocalDate(str) {
     const [y, m, d] = str.split('-').map(Number);
@@ -1051,10 +1050,11 @@
     }
   }
 
-  // 書く画面のインラインカレンダー
-  let writeCalYear  = new Date().getFullYear();
-  let writeCalMonth = new Date().getMonth();
+  // 書く画面のインラインカレンダー（変数を先に宣言）
+  let writeCalYear    = new Date().getFullYear();
+  let writeCalMonth   = new Date().getMonth();
   let selectedDateStr = todayStr;
+  renderWriteCalendar();
 
   function changeWriteMonth(dir) {
     writeCalMonth += dir;

@@ -1092,8 +1092,12 @@
       let dots = '';
       if (info?.jiji) dots += '<span class="cal-dot jiji-dot"></span>';
       if (info?.gn)   dots += '<span class="cal-dot gn-dot"></span>';
-      const cls = ['cal-day', isToday ? 'today' : '', isSelected ? 'selected' : ''].filter(Boolean).join(' ');
-      html += `<div class="${cls}" onclick="selectWriteDate(${writeCalYear},${writeCalMonth+1},${d})">
+      const hasEntry = !!info;
+      const onclick  = hasEntry
+        ? `openDayHistory(${writeCalYear},${writeCalMonth+1},${d})`
+        : `selectWriteDate(${writeCalYear},${writeCalMonth+1},${d})`;
+      const cls = ['cal-day', isToday ? 'today' : '', isSelected ? 'selected' : '', hasEntry ? 'has-entry' : ''].filter(Boolean).join(' ');
+      html += `<div class="${cls}" onclick="${onclick}">
         <span>${d}</span>
         ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
       </div>`;
@@ -1105,6 +1109,37 @@
     selectedDateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     document.getElementById('entry-date').value = selectedDateStr;
     renderWriteCalendar();
+  }
+
+  function openDayHistory(y, m, d) {
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    entries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+    const dayEntries = entries.filter(e => {
+      const dt = new Date(e.date);
+      return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+    });
+    if (dayEntries.length === 0) return;
+    if (dayEntries.length === 1) {
+      const idx = entries.findIndex(e => e.id === dayEntries[0].id);
+      showDetail(idx);
+    } else {
+      // 複数ある日は履歴タブに絞り込み表示
+      const list = document.getElementById('history-list');
+      list.innerHTML = `<div style="padding:12px 0 6px;font-size:13px;color:var(--mid)">${y}年${m}月${d}日の記録</div>` +
+        dayEntries.map((e, i) => {
+          const isGn  = e.type === 'gn';
+          const title = e.fact || e.dekigoto || e.moya || (isGn ? e.dekita : '') || '（内容なし）';
+          const globalIdx = entries.findIndex(en => en.id === e.id);
+          return `<div class="history-item ${isGn ? 'gn' : 'jiji'}" onclick="showDetail(${globalIdx})">
+            <div class="history-meta">
+              <span class="history-type-badge ${isGn ? 'badge-gn' : 'badge-jiji'}">${isGn ? 'G&N' : '事実と解釈'}</span>
+              ${e.lineSent ? '<span style="font-size:11px;color:var(--green)">📲 送信済み</span>' : ''}
+            </div>
+            <div class="history-title">${title}</div>
+          </div>`;
+        }).join('');
+      showView('history');
+    }
   }
 
   let calYear  = new Date().getFullYear();
@@ -1288,10 +1323,27 @@
     return text.trimEnd();
   }
 
+  function markLineSent(entryId) {
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    const idx = entries.findIndex(e => e.id === entryId);
+    if (idx !== -1) {
+      entries[idx].lineSent = true;
+      localStorage.setItem('jijiEntries', JSON.stringify(entries));
+      if (supabaseUser) saveToSupabaseById(entries[idx]);
+    }
+  }
+
+  async function saveToSupabaseById(entry) {
+    await deleteFromSupabase(entry.id);
+    await saveToSupabase(entry);
+  }
+
   function shareToLINE(entry) {
     const text     = buildText(entry);
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
     const encoded  = encodeURIComponent(text);
+    markLineSent(entry.id);
+    renderHistory();
     if (isMobile) {
       location.href = 'https://line.me/R/share?text=' + encoded;
     } else {
@@ -1341,6 +1393,7 @@
           <div class="history-meta">
             <span class="history-date">${dayStr}${dateStr}</span>
             <span class="history-type-badge ${isGn ? 'badge-gn' : 'badge-jiji'}">${isGn ? 'G&N' : '事実と解釈'}</span>
+            ${e.lineSent ? '<span style="font-size:11px;color:var(--green)">📲 送信済み</span>' : ''}
           </div>
           <div class="history-title">${title}</div>
           ${preview ? `<div class="history-preview">${preview}</div>` : ''}

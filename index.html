@@ -1474,6 +1474,7 @@
       document.getElementById('insight').value  = e.insight  || '';
     }
     editingId = e.id;
+    localStorage.removeItem(DRAFT_KEY);
     showToast('✏️ 編集モード。修正して保存してね');
   }
 
@@ -1526,8 +1527,8 @@
     ta.addEventListener('input', saveDraft);
   });
 
-  // キーボード表示/非表示をvisualViewportで検出してボタンを切り替え
-  if (window.visualViewport) {
+  // キーボード表示/非表示をvisualViewportで検出してボタンを切り替え（スマホのみ）
+  if (window.visualViewport && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
     const threshold = window.innerHeight * 0.25;
     window.visualViewport.addEventListener('resize', () => {
       const actions = document.getElementById('write-actions');

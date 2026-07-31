@@ -415,6 +415,23 @@
     font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
   }
 
+  /* インラインカレンダー */
+  .inline-cal {
+    background: white; border-radius: 14px; border: 1px solid var(--border);
+    padding: 12px; margin-bottom: 12px;
+  }
+  .inline-cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .inline-cal .cal-day {
+    font-size: 12px; border-radius: 8px;
+  }
+  .inline-cal .cal-day.selected {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  .inline-cal .cal-day.selected .cal-dot { opacity: 0.7; }
+
   /* カレンダー */
   .cal-nav {
     display: flex; align-items: center; justify-content: space-between;
@@ -474,7 +491,6 @@
     <div class="nav-tabs">
       <button class="tab-btn active" id="tab-write"   onclick="showView('write')">書く</button>
       <button class="tab-btn"        id="tab-history" onclick="showView('history')">履歴</button>
-      <button class="tab-btn"        id="tab-calendar" onclick="showView('calendar')">カレンダー</button>
     </div>
   </div>
   <div id="login-status" style="display:none; font-size:11px; color:var(--mid); padding:4px 0 0; display:flex; align-items:center; justify-content:space-between;">
@@ -498,10 +514,20 @@
     </div>
   </div>
 
-  <div class="date-picker-wrap">
-    <span class="date-picker-label">📅 記録日</span>
-    <input type="date" id="entry-date">
+  <!-- インラインカレンダー -->
+  <div class="inline-cal">
+    <div class="inline-cal-nav">
+      <button class="cal-nav-btn" onclick="changeWriteMonth(-1)">＜</button>
+      <span id="write-cal-label" class="cal-month-label"></span>
+      <button class="cal-nav-btn" onclick="changeWriteMonth(1)">＞</button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
+      <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div><div class="cal-dow">土</div>
+    </div>
+    <div id="write-cal-days" class="cal-grid"></div>
   </div>
+  <input type="hidden" id="entry-date">
 
   <!-- 事実と解釈フォーム -->
   <div id="form-jiji">
@@ -950,6 +976,7 @@
     String(now.getMonth()+1).padStart(2,'0') + '-' +
     String(now.getDate()).padStart(2,'0');
   document.getElementById('entry-date').value = todayStr;
+  renderWriteCalendar();
 
   function parseLocalDate(str) {
     const [y, m, d] = str.split('-').map(Number);
@@ -1022,6 +1049,62 @@
       document.getElementById('tab-calendar').classList.add('active');
       renderCalendar();
     }
+  }
+
+  // 書く画面のインラインカレンダー
+  let writeCalYear  = new Date().getFullYear();
+  let writeCalMonth = new Date().getMonth();
+  let selectedDateStr = todayStr;
+
+  function changeWriteMonth(dir) {
+    writeCalMonth += dir;
+    if (writeCalMonth > 11) { writeCalMonth = 0; writeCalYear++; }
+    if (writeCalMonth < 0)  { writeCalMonth = 11; writeCalYear--; }
+    renderWriteCalendar();
+  }
+
+  function renderWriteCalendar() {
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    const today   = new Date();
+    const dayMap  = {};
+    entries.forEach(e => {
+      const d = new Date(e.date);
+      if (d.getFullYear() !== writeCalYear || d.getMonth() !== writeCalMonth) return;
+      const key = d.getDate();
+      if (!dayMap[key]) dayMap[key] = { jiji: false, gn: false };
+      if (e.type === 'gn') dayMap[key].gn = true;
+      else dayMap[key].jiji = true;
+    });
+
+    document.getElementById('write-cal-label').textContent =
+      writeCalYear + '年 ' + (writeCalMonth + 1) + '月';
+
+    const firstDay = new Date(writeCalYear, writeCalMonth, 1).getDay();
+    const lastDate = new Date(writeCalYear, writeCalMonth + 1, 0).getDate();
+    const selParts = selectedDateStr.split('-').map(Number);
+    let html = '';
+
+    for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+    for (let d = 1; d <= lastDate; d++) {
+      const isToday    = d === today.getDate() && writeCalMonth === today.getMonth() && writeCalYear === today.getFullYear();
+      const isSelected = d === selParts[2] && writeCalMonth === selParts[1] - 1 && writeCalYear === selParts[0];
+      const info = dayMap[d];
+      let dots = '';
+      if (info?.jiji) dots += '<span class="cal-dot jiji-dot"></span>';
+      if (info?.gn)   dots += '<span class="cal-dot gn-dot"></span>';
+      const cls = ['cal-day', isToday ? 'today' : '', isSelected ? 'selected' : ''].filter(Boolean).join(' ');
+      html += `<div class="${cls}" onclick="selectWriteDate(${writeCalYear},${writeCalMonth+1},${d})">
+        <span>${d}</span>
+        ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
+      </div>`;
+    }
+    document.getElementById('write-cal-days').innerHTML = html;
+  }
+
+  function selectWriteDate(y, m, d) {
+    selectedDateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    document.getElementById('entry-date').value = selectedDateStr;
+    renderWriteCalendar();
   }
 
   let calYear  = new Date().getFullYear();

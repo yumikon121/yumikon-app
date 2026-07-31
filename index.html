@@ -693,7 +693,7 @@
       <button class="btn btn-save" style="flex:1" onclick="saveEntry()">💾 保存する</button>
       <button class="btn btn-line" style="flex:1" onclick="saveAndShareLINE()">📲 LINEに送る</button>
     </div>
-    <button class="btn btn-secondary" onclick="if(confirm('入力内容をクリアしますか？'))clearForm()">クリア</button>
+    <button class="btn btn-secondary" onclick="confirmClear()">クリア</button>
   </div>
 
 </div><!-- /view-write -->
@@ -1123,10 +1123,11 @@
       const idx = entries.findIndex(e => e.id === dayEntries[0].id);
       showDetail(idx);
     } else {
-      // 複数ある日は履歴タブに絞り込み表示
+      // 複数ある日は履歴タブに絞り込み表示（showViewの後にセット）
+      showView('history');
       const list = document.getElementById('history-list');
       list.innerHTML = `<div style="padding:12px 0 6px;font-size:13px;color:var(--mid)">${y}年${m}月${d}日の記録</div>` +
-        dayEntries.map((e, i) => {
+        dayEntries.map((e) => {
           const isGn  = e.type === 'gn';
           const title = e.fact || e.dekigoto || e.moya || (isGn ? e.dekita : '') || '（内容なし）';
           const globalIdx = entries.findIndex(en => en.id === e.id);
@@ -1138,7 +1139,6 @@
             <div class="history-title">${title}</div>
           </div>`;
         }).join('');
-      showView('history');
     }
   }
 
@@ -1479,14 +1479,35 @@
   }
 
   async function deleteEntry() {
-    if (!confirm('この記録を削除しますか？')) return;
-    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
-    const targetId = currentEntry?.id;
-    const idx = targetId ? entries.findIndex(e => e.id === targetId) : -1;
-    if (idx !== -1) entries.splice(idx, 1);
-    localStorage.setItem('jijiEntries', JSON.stringify(entries));
-    if (targetId) await deleteFromSupabase(targetId);
-    showView('history');
+    showConfirm('この記録を削除しますか？', async () => {
+      const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+      const targetId = currentEntry?.id;
+      const idx = targetId ? entries.findIndex(e => e.id === targetId) : -1;
+      if (idx !== -1) entries.splice(idx, 1);
+      localStorage.setItem('jijiEntries', JSON.stringify(entries));
+      if (targetId) await deleteFromSupabase(targetId);
+      showView('history');
+    });
+  }
+
+  function confirmClear() {
+    showConfirm('入力内容をクリアしますか？', () => clearForm());
+  }
+
+  function showConfirm(message, onOk) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:20000;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+      <div style="background:white;border-radius:16px;padding:24px;width:85%;max-width:320px;text-align:center;">
+        <p style="font-size:15px;color:#3C3430;margin-bottom:20px;line-height:1.6">${message}</p>
+        <div style="display:flex;gap:10px;">
+          <button id="confirm-cancel" style="flex:1;padding:12px;border-radius:10px;border:1px solid #E8E2DC;background:white;font-family:inherit;font-size:14px;cursor:pointer;">キャンセル</button>
+          <button id="confirm-ok" style="flex:1;padding:12px;border-radius:10px;border:none;background:#C4827A;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#confirm-cancel').onclick = () => overlay.remove();
+    overlay.querySelector('#confirm-ok').onclick = () => { overlay.remove(); onOk(); };
   }
 
   // 自動保存（下書き）
@@ -1506,12 +1527,22 @@
       kansha:   document.getElementById('gn-kansha').value,
       free:     document.getElementById('gn-free').value,
     };
+    draft.savedAt = new Date().toISOString();
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }
 
   function restoreDraft() {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return;
+    if (editingId !== null) return;
+    // 今日のドラフトだけ復元する
+    try {
+      const d = JSON.parse(raw);
+      if (d.savedAt && d.savedAt.slice(0, 10) !== todayStr) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+    } catch(e) { localStorage.removeItem(DRAFT_KEY); return; }
     const d = JSON.parse(raw);
     if (d.mode === 'gn' || d.mode === 'jiji') setMode(d.mode);
     if (d.date) document.getElementById('entry-date').value = d.date;

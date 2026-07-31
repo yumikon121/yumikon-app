@@ -995,8 +995,6 @@
     showToast('✅ DAY' + val + 'で保存しました！');
   }
 
-  if (!localStorage.getItem('startDate') && !supabaseUser) openDayModal();
-
   // モード切替
   function setMode(mode) {
     currentMode = mode;

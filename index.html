@@ -884,7 +884,11 @@
     // Supabaseの全件を取得してlocalStorageを上書き（他端末の削除も反映）
     const { data: allRows, error } = await sb.from('entries').select('data').eq('user_id', supabaseUser.id);
     if (error) return;
-    const allEntries = (allRows || []).map(r => r.data).filter(Boolean);
+    const remoteEntries = (allRows || []).map(r => r.data).filter(Boolean);
+    const remoteIds = new Set(remoteEntries.map(e => String(e.id)));
+    // Supabaseに届いてないローカルエントリを救済（送信失敗時の消失防止）
+    const localOnly = local.filter(e => e.id && !remoteIds.has(String(e.id)));
+    const allEntries = [...localOnly, ...remoteEntries];
     allEntries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
     localStorage.setItem('jijiEntries', JSON.stringify(allEntries));
   }
@@ -1272,24 +1276,29 @@
   async function saveAndShareLINE() {
     const entry   = buildEntry();
     const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    let lineEntry = entry;
     if (editingId !== null) {
       const idx = entries.findIndex(e => e.id === editingId);
       const targetId = editingId;
-      if (idx !== -1) entries[idx] = { ...entries[idx], ...entry, id: targetId };
+      if (idx !== -1) {
+        entries[idx] = { ...entries[idx], ...entry, id: targetId };
+        lineEntry = entries[idx];
+      }
       editingId = null;
+      localStorage.setItem('jijiEntries', JSON.stringify(entries));
       if (supabaseUser && targetId) {
         await deleteFromSupabase(targetId);
-        await saveToSupabase(entries.find(e => e.id === targetId) || entry);
+        await saveToSupabase(lineEntry);
       }
     } else {
       entries.unshift(entry);
+      localStorage.setItem('jijiEntries', JSON.stringify(entries));
       await saveToSupabase(entry);
     }
-    localStorage.setItem('jijiEntries', JSON.stringify(entries));
     clearForm();
     showToast('✅ 保存してLINEに送ります！');
     showCheerToast();
-    setTimeout(() => shareToLINE(entry), 2000);
+    setTimeout(() => shareToLINE(lineEntry), 2000);
   }
 
   function buildText(entry) {

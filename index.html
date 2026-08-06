@@ -704,25 +704,6 @@
   <div style="height:80px"></div>
 </div>
 
-<!-- カレンダービュー -->
-<div class="view" id="view-calendar">
-  <div class="cal-nav">
-    <button class="cal-nav-btn" onclick="changeMonth(-1)">＜</button>
-    <span class="cal-month-label" id="cal-month-label"></span>
-    <button class="cal-nav-btn" onclick="changeMonth(1)">＞</button>
-  </div>
-  <div class="cal-grid">
-    <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
-    <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div><div class="cal-dow">土</div>
-  </div>
-  <div id="cal-days" class="cal-grid"></div>
-  <div class="cal-legend">
-    <span class="cal-dot jiji-dot"></span>事実と解釈
-    <span class="cal-dot gn-dot" style="margin-left:12px"></span>G&amp;N
-  </div>
-  <div style="height:40px"></div>
-</div>
-
 <!-- 詳細ビュー -->
 <div class="view" id="view-detail">
   <div class="detail-header">
@@ -850,8 +831,7 @@
     }
     calcDay();
     await syncFromSupabase();
-    renderHistory();
-    renderWriteCalendar();
+    refreshAll();
     updateLoginStatus();
   }
 
@@ -912,6 +892,20 @@
     }
   }
 
+  // 既存レコードを上書き更新する（削除→挿入だと途中で失敗したとき
+  // 消滅や重複が起きるため、必ずupdateを使う）
+  async function updateInSupabase(entry) {
+    if (!supabaseUser || !entry?.id) return;
+    const { data, error } = await sb.from('entries')
+      .update({ mode: entry.type || 'gn', data: entry })
+      .eq('user_id', supabaseUser.id)
+      .filter('data->>id', 'eq', String(entry.id))
+      .select('id');
+    if (error) { showToast('⚠️ 更新エラー: ' + error.message); return; }
+    // 対象が1件も無かった場合だけ新規挿入する
+    if (!data || data.length === 0) await saveToSupabase(entry);
+  }
+
   async function deleteFromSupabase(entryId) {
     if (!supabaseUser || !entryId) return;
     const { error } = await sb.from('entries')
@@ -937,7 +931,7 @@
     if (!supabaseUser) { showToast('ログインしてね'); return; }
     showToast('同期中...');
     await syncFromSupabase();
-    renderHistory();
+    refreshAll();
     showToast('✅ 同期完了！');
   }
 
@@ -965,7 +959,8 @@
     document.getElementById('write-actions').style.flexDirection = 'column';
     setMode('gn');
     restoreDraft();
-    renderHistory();
+    calcDay();
+    refreshAll();
     updateLoginStatus();
   })();
 
@@ -1010,6 +1005,19 @@
     return new Date(y, m - 1, d);
   }
 
+  // 履歴の並び順はここ1箇所に統一する（表示と詳細でズレると別の記録が開くため）
+  function sortedEntries() {
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    entries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+    return entries;
+  }
+
+  // 保存後に画面全体を描き直す
+  function refreshAll() {
+    renderHistory();
+    renderWriteCalendar();
+  }
+
   function calcDay() {
     const saved = localStorage.getItem('startDate');
     if (!saved) { document.getElementById('day-count').textContent = 'DAY ?'; return; }
@@ -1023,8 +1031,9 @@
   function openDayModal() {
     const saved = localStorage.getItem('startDate');
     if (saved) {
-      const start = new Date(saved);
-      const diff  = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + 1;
+      const start = parseLocalDate(saved);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diff  = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1;
       document.getElementById('day-input').value = diff;
     } else {
       document.getElementById('day-input').value = '';
@@ -1072,9 +1081,6 @@
       renderHistory();
     } else if (v === 'write') {
       document.getElementById('tab-write').classList.add('active');
-    } else if (v === 'calendar') {
-      document.getElementById('tab-calendar').classList.add('active');
-      renderCalendar();
     }
   }
 
@@ -1140,8 +1146,7 @@
   }
 
   function openDayHistory(y, m, d) {
-    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
-    entries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+    const entries = sortedEntries();
     const dayEntries = entries.filter(e => {
       const dt = new Date(e.date);
       return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
@@ -1167,73 +1172,6 @@
             <div class="history-title">${title}</div>
           </div>`;
         }).join('');
-    }
-  }
-
-  let calYear  = new Date().getFullYear();
-  let calMonth = new Date().getMonth();
-
-  function changeMonth(dir) {
-    calMonth += dir;
-    if (calMonth > 11) { calMonth = 0; calYear++; }
-    if (calMonth < 0)  { calMonth = 11; calYear--; }
-    renderCalendar();
-  }
-
-  function renderCalendar() {
-    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
-    const today   = new Date();
-
-    // 日付ごとにエントリ種別をまとめる
-    const dayMap = {};
-    entries.forEach(e => {
-      const d = new Date(e.date);
-      if (d.getFullYear() !== calYear || d.getMonth() !== calMonth) return;
-      const key = d.getDate();
-      if (!dayMap[key]) dayMap[key] = { jiji: false, gn: false };
-      if (e.type === 'gn') dayMap[key].gn = true;
-      else dayMap[key].jiji = true;
-    });
-
-    document.getElementById('cal-month-label').textContent =
-      calYear + '年 ' + (calMonth + 1) + '月';
-
-    const firstDay = new Date(calYear, calMonth, 1).getDay();
-    const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
-    let html = '';
-
-    for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
-    for (let d = 1; d <= lastDate; d++) {
-      const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
-      const info    = dayMap[d];
-      const hasEntry = !!info;
-      let dots = '';
-      if (info?.jiji) dots += '<span class="cal-dot jiji-dot"></span>';
-      if (info?.gn)   dots += '<span class="cal-dot gn-dot"></span>';
-      const onclick = hasEntry ? `onclick="showDayEntries(${d})"` : '';
-      html += `<div class="cal-day${isToday ? ' today' : ''}${hasEntry ? ' has-entry' : ''}" ${onclick}>
-        <span>${d}</span>
-        ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
-      </div>`;
-    }
-    document.getElementById('cal-days').innerHTML = html;
-  }
-
-  function showDayEntries(day) {
-    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
-    const dayEntries = entries.filter(e => {
-      const d = new Date(e.date);
-      return d.getFullYear() === calYear && d.getMonth() === calMonth && d.getDate() === day;
-    });
-    if (dayEntries.length === 0) return;
-    if (dayEntries.length === 1) {
-      const all = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
-      all.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
-      const idx = all.findIndex(e => e.id === dayEntries[0].id);
-      if (idx !== -1) showDetail(idx);
-    } else {
-      // 複数ある場合は履歴に飛ばす（今後改善できる）
-      showView('history');
     }
   }
 
@@ -1281,11 +1219,7 @@
       if (idx !== -1) entries[idx] = { ...entries[idx], ...entry, id: targetId };
       editingId = null;
       localStorage.setItem('jijiEntries', JSON.stringify(entries));
-      // 編集時はSupabaseの該当レコードを削除して再登録
-      if (supabaseUser && targetId) {
-        await deleteFromSupabase(targetId);
-        await saveToSupabase(entries.find(e => e.id === targetId) || entry);
-      }
+      await updateInSupabase(entries.find(e => e.id === targetId) || entry);
       showToast('✅ 更新しました！');
     } else {
       entries.unshift(entry);
@@ -1294,7 +1228,7 @@
       showToast('✅ 保存しました！');
     }
     clearForm();
-    renderHistory();
+    refreshAll();
   }
 
   async function saveAndShareLINE() {
@@ -1310,10 +1244,7 @@
       }
       editingId = null;
       localStorage.setItem('jijiEntries', JSON.stringify(entries));
-      if (supabaseUser && targetId) {
-        await deleteFromSupabase(targetId);
-        await saveToSupabase(lineEntry);
-      }
+      await updateInSupabase(lineEntry);
     } else {
       entries.unshift(entry);
       localStorage.setItem('jijiEntries', JSON.stringify(entries));
@@ -1356,27 +1287,22 @@
     return text.trimEnd();
   }
 
-  function markLineSent(entryId) {
+  async function markLineSent(entryId) {
     const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
     const idx = entries.findIndex(e => e.id === entryId);
-    if (idx !== -1) {
-      entries[idx].lineSent = true;
-      localStorage.setItem('jijiEntries', JSON.stringify(entries));
-      if (supabaseUser) saveToSupabaseById(entries[idx]);
-    }
+    if (idx === -1) return;
+    entries[idx].lineSent = true;
+    localStorage.setItem('jijiEntries', JSON.stringify(entries));
+    await updateInSupabase(entries[idx]);
   }
 
-  async function saveToSupabaseById(entry) {
-    await deleteFromSupabase(entry.id);
-    await saveToSupabase(entry);
-  }
-
-  function shareToLINE(entry) {
+  async function shareToLINE(entry) {
     const text     = buildText(entry);
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
     const encoded  = encodeURIComponent(text);
-    markLineSent(entry.id);
-    renderHistory();
+    // LINEへ遷移する前に同期を終わらせる（途中で切れると記録が消えるため）
+    await markLineSent(entry.id);
+    refreshAll();
     if (isMobile) {
       location.href = 'https://line.me/R/share?text=' + encoded;
     } else {
@@ -1404,8 +1330,7 @@
 
   // 履歴
   function renderHistory() {
-    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
-    entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const entries = sortedEntries();
     const list    = document.getElementById('history-list');
     if (!entries.length) {
       list.innerHTML = '<div class="history-empty">まだ記録がありません。<br>「書く」タブからワークを始めましょう！</div>';
@@ -1436,9 +1361,9 @@
   }
 
   function showDetail(i) {
-    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
-    entries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+    const entries = sortedEntries();
     const e       = entries[i];
+    if (!e) return;
     currentEntry  = e;
     currentId     = i;
 
@@ -1519,6 +1444,7 @@
       if (idx !== -1) entries.splice(idx, 1);
       localStorage.setItem('jijiEntries', JSON.stringify(entries));
       if (targetId) await deleteFromSupabase(targetId);
+      refreshAll();
       showView('history');
     });
   }

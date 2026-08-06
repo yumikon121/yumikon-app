@@ -885,9 +885,9 @@
     const { data: allRows, error } = await sb.from('entries').select('data').eq('user_id', supabaseUser.id);
     if (error) return;
     const remoteEntries = (allRows || []).map(r => r.data).filter(Boolean);
-    const remoteIds = new Set(remoteEntries.map(e => String(e.id)));
+    const remoteEntryIds = new Set(remoteEntries.map(e => String(e.id)));
     // Supabaseに届いてないローカルエントリを救済（送信失敗時の消失防止）
-    const localOnly = local.filter(e => e.id && !remoteIds.has(String(e.id)));
+    const localOnly = local.filter(e => e.id && !remoteEntryIds.has(String(e.id)));
     const allEntries = [...localOnly, ...remoteEntries];
     allEntries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
     localStorage.setItem('jijiEntries', JSON.stringify(allEntries));

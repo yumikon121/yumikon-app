@@ -888,9 +888,17 @@
     const remoteEntryIds = new Set(remoteEntries.map(e => String(e.id)));
     // Supabaseに届いてないローカルエントリを救済（送信失敗時の消失防止）
     const localOnly = local.filter(e => e.id && !remoteEntryIds.has(String(e.id)));
-    const allEntries = [...localOnly, ...remoteEntries];
-    allEntries.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
-    localStorage.setItem('jijiEntries', JSON.stringify(allEntries));
+    const merged = [...localOnly, ...remoteEntries];
+    // id重複除去：同じidが複数ある場合はlineSent:trueを優先、なければ最後のものを残す
+    const deduped = Object.values(
+      merged.reduce((acc, e) => {
+        const key = String(e.id);
+        if (!acc[key] || e.lineSent) acc[key] = e;
+        return acc;
+      }, {})
+    );
+    deduped.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
+    localStorage.setItem('jijiEntries', JSON.stringify(deduped));
   }
 
   async function saveToSupabase(entry) {

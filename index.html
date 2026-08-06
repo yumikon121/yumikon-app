@@ -982,6 +982,21 @@
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
+  // 起動時にlocalStorageの重複エントリを除去（PWA・キャッシュ対策）
+  (function dedupeLocalEntries() {
+    const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
+    const deduped = Object.values(
+      entries.reduce((acc, e) => {
+        const key = String(e.id);
+        if (!acc[key] || e.lineSent) acc[key] = e;
+        return acc;
+      }, {})
+    );
+    if (deduped.length !== entries.length) {
+      localStorage.setItem('jijiEntries', JSON.stringify(deduped));
+    }
+  })();
+
   // 今日の日付
   const now = new Date();
   const todayStr = now.getFullYear() + '-' +

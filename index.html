@@ -495,8 +495,16 @@
   </div>
   <div id="login-status" style="display:none; font-size:11px; color:var(--mid); padding:4px 0 0; display:flex; align-items:center; justify-content:space-between;">
     <span id="login-status-text"></span>
-    <button onclick="logout()" style="background:none; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:11px; color:var(--mid); padding:2px 8px; cursor:pointer;">ログアウト</button>
+    <span style="display:flex; align-items:center; gap:8px;">
+      <span id="app-version" style="font-size:10px; color:var(--mid); opacity:.7;"></span>
+      <button onclick="logout()" style="background:none; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:11px; color:var(--mid); padding:2px 8px; cursor:pointer;">ログアウト</button>
+    </span>
   </div>
+</div>
+
+<div id="update-bar" style="display:none; position:fixed; left:0; right:0; bottom:0; z-index:15000; background:#3C3430; color:#fff; padding:12px 16px; align-items:center; justify-content:space-between; gap:12px; font-size:13px;">
+  <span>新しいバージョンがあります</span>
+  <button onclick="location.reload()" style="background:#fff; color:#3C3430; border:none; border-radius:8px; font-family:inherit; font-size:13px; font-weight:700; padding:8px 16px; cursor:pointer;">更新する</button>
 </div>
 
 <!-- 書くビュー -->
@@ -763,6 +771,29 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // 更新するたびにこの日付を上げる。ホーム画面アプリは古いHTMLを
+  // 保持し続けることがあるため、これを見て新版の有無を判定する
+  const APP_VERSION = '2026.08.18';
+
+  // 配信元から最新のHTMLだけを取り直してバージョンを比べる
+  async function checkForUpdate() {
+    try {
+      const res = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return;
+      const html  = await res.text();
+      const found = html.match(/APP_VERSION\s*=\s*'([^']+)'/);
+      if (!found || found[1] === APP_VERSION) return;
+      // 書きかけが無ければ黙って読み込み直す
+      if (isFormEmpty()) { location.reload(); return; }
+      document.getElementById('update-bar').style.display = 'flex';
+    } catch (e) {}
+  }
+
+  function isFormEmpty() {
+    return [...document.querySelectorAll('#view-write textarea')]
+      .every(t => !t.value.trim());
+  }
+
   // Supabase 初期化
   const SUPABASE_URL  = 'https://sjpnzrbfgtisrhtthwyu.supabase.co';
   const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqcG56cmJmZ3Rpc3JodHRod3l1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyODU2NzksImV4cCI6MjA5OTg2MTY3OX0.uONb3sy3z-NZJG1IXeuGCXp79JCdXCUejgd888m82Mc';
@@ -962,7 +993,16 @@
     calcDay();
     refreshAll();
     updateLoginStatus();
+
+    const vEl = document.getElementById('app-version');
+    if (vEl) vEl.textContent = 'v' + APP_VERSION;
+    checkForUpdate();
   })();
+
+  // アプリに戻ってきたときにも新版が出ていないか確かめる
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
 
   let currentEntry = null;
   let currentId    = null;

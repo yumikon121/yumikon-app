@@ -1249,19 +1249,20 @@
     }
     localStorage.setItem('jijiEntries', JSON.stringify(entries));
 
-    // 通信を待つ前にコピーを済ませる（await をはさむとユーザー操作判定が切れる）
+    // 通信を待つ前に共有・コピーを済ませる（await をはさむとユーザー操作判定が切れる）
     const shareText = buildText(lineEntry);
     const tooLong   = isTooLongForLine(shareText);
-    if (tooLong) copyTextSync(shareText);
+    const shared    = tooLong && tryNativeShare(lineEntry, shareText);
+    if (tooLong && !shared) copyTextSync(shareText);
 
     clearForm();
     showToast('✅ 保存してLINEに送ります！');
-    showCheerToast();
+    if (!shared) showCheerToast();
 
     if (isEditing) await updateInSupabase(lineEntry);
     else           await saveToSupabase(entry);
 
-    setTimeout(() => shareToLINE(lineEntry, tooLong), 2000);
+    if (!shared) setTimeout(() => shareToLINE(lineEntry, tooLong), 2000);
   }
 
   function buildText(entry) {
@@ -1333,10 +1334,51 @@
     }
   }
 
-  // クリック直後の入口。長い記録はここでコピーまで済ませてしまう
+  // 共有先から戻ってきたタイミングで応援トーストを出す。
+  // 共有画面は即座に開くため、トーストを先に見せる余裕がないので順番を入れ替える
+  let cheerReturnHandler = null;
+
+  function cheerOnReturn() {
+    cancelCheerOnReturn();
+    cheerReturnHandler = () => {
+      if (document.visibilityState !== 'visible') return;
+      cancelCheerOnReturn();
+      setTimeout(showCheerToast, 400);
+    };
+    document.addEventListener('visibilitychange', cheerReturnHandler);
+  }
+
+  function cancelCheerOnReturn() {
+    if (!cheerReturnHandler) return;
+    document.removeEventListener('visibilitychange', cheerReturnHandler);
+    cheerReturnHandler = null;
+  }
+
+  // 端末の共有機能に本文を直接渡す。URLを経由しないので文字数の上限がない。
+  // navigator.share はタップ直後にしか呼べない（await をはさむと無効になる）ため、
+  // ここでは待たずに即座に呼び出す
+  function tryNativeShare(entry, text) {
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (!isMobile || !navigator.share) return false;
+    cheerOnReturn();
+    navigator.share({ text })
+      .then(async () => { await markLineSent(entry.id); refreshAll(); })
+      .catch(err => {
+        cancelCheerOnReturn();
+        if (err && err.name === 'AbortError') return;  // ユーザーが共有を閉じただけ
+        // 共有が使えなかったときはコピー方式に戻す
+        copyTextSync(text);
+        showCheerToast();
+        setTimeout(() => shareToLINE(entry, true), 2000);
+      });
+    return true;
+  }
+
+  // クリック直後の入口
   function prepareAndShare(entry) {
     const text    = buildText(entry);
     const tooLong = isTooLongForLine(text);
+    if (tooLong && tryNativeShare(entry, text)) return;
     if (tooLong) copyTextSync(text);
     showCheerToast();
     setTimeout(() => shareToLINE(entry, tooLong), 2000);

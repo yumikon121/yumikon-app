@@ -714,7 +714,7 @@
   <div class="detail-actions">
     <button class="btn-del"       onclick="deleteEntry()">削除</button>
     <button class="btn-edit"      onclick="editEntry()">編集</button>
-    <button class="btn-line-small" onclick="showCheerToast(); setTimeout(() => shareToLINE(currentEntry), 2000)">LINEに送る</button>
+    <button class="btn-line-small" onclick="prepareAndShare(currentEntry)">LINEに送る</button>
   </div>
   <div style="height:40px"></div>
 </div>
@@ -1235,25 +1235,33 @@
     const entry   = buildEntry();
     const entries = JSON.parse(localStorage.getItem('jijiEntries') || '[]');
     let lineEntry = entry;
-    if (editingId !== null) {
+    const isEditing = editingId !== null;
+    const targetId  = editingId;
+    if (isEditing) {
       const idx = entries.findIndex(e => e.id === editingId);
-      const targetId = editingId;
       if (idx !== -1) {
         entries[idx] = { ...entries[idx], ...entry, id: targetId };
         lineEntry = entries[idx];
       }
       editingId = null;
-      localStorage.setItem('jijiEntries', JSON.stringify(entries));
-      await updateInSupabase(lineEntry);
     } else {
       entries.unshift(entry);
-      localStorage.setItem('jijiEntries', JSON.stringify(entries));
-      await saveToSupabase(entry);
     }
+    localStorage.setItem('jijiEntries', JSON.stringify(entries));
+
+    // 通信を待つ前にコピーを済ませる（await をはさむとユーザー操作判定が切れる）
+    const shareText = buildText(lineEntry);
+    const tooLong   = isTooLongForLine(shareText);
+    if (tooLong) copyTextSync(shareText);
+
     clearForm();
     showToast('✅ 保存してLINEに送ります！');
     showCheerToast();
-    setTimeout(() => shareToLINE(lineEntry), 2000);
+
+    if (isEditing) await updateInSupabase(lineEntry);
+    else           await saveToSupabase(entry);
+
+    setTimeout(() => shareToLINE(lineEntry, tooLong), 2000);
   }
 
   function buildText(entry) {
@@ -1296,22 +1304,70 @@
     await updateInSupabase(entries[idx]);
   }
 
-  async function shareToLINE(entry) {
+  // 日本語1文字はURL上で9文字（%E3%81%82）になる。長い記録だとURLが
+  // サーバーの上限を超えて 414 Request-URI Too Large になるため上限を設ける
+  const LINE_URL_LIMIT = 5000;
+
+  function isTooLongForLine(text) {
+    return encodeURIComponent(text).length > LINE_URL_LIMIT;
+  }
+
+  // クリック直後に同期的に実行すること。await をはさむとブラウザの
+  // ユーザー操作判定が切れてコピーが失敗する
+  function copyTextSync(text) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand('copy');
+      ta.remove();
+      if (!ok && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+      return ok;
+    } catch (e) {
+      if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+      return false;
+    }
+  }
+
+  // クリック直後の入口。長い記録はここでコピーまで済ませてしまう
+  function prepareAndShare(entry) {
+    const text    = buildText(entry);
+    const tooLong = isTooLongForLine(text);
+    if (tooLong) copyTextSync(text);
+    showCheerToast();
+    setTimeout(() => shareToLINE(entry, tooLong), 2000);
+  }
+
+  async function shareToLINE(entry, tooLong) {
     const text     = buildText(entry);
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-    const encoded  = encodeURIComponent(text);
+    if (tooLong === undefined) tooLong = isTooLongForLine(text);
     // LINEへ遷移する前に同期を終わらせる（途中で切れると記録が消えるため）
     await markLineSent(entry.id);
     refreshAll();
-    if (isMobile) {
-      location.href = 'https://line.me/R/share?text=' + encoded;
-    } else {
-      navigator.clipboard.writeText(text).then(() => {
-        showToast('📋 コピーしました！LINEに貼り付けてね');
-      }).catch(() => {
-        showToast('📋 LINEを開いて貼り付けてね');
-      });
+
+    if (isMobile && !tooLong) {
+      location.href = 'https://line.me/R/share?text=' + encodeURIComponent(text);
+      return;
     }
+
+    if (isMobile) {
+      // 長すぎてURLに載らない。コピー済みなので貼り付けてもらう
+      showToast('📋 長いのでコピーしました！LINEで貼り付けてね');
+      setTimeout(() => { location.href = 'https://line.me/R/nv/chat'; }, 1600);
+      return;
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 コピーしました！LINEに貼り付けてね');
+    }).catch(() => {
+      copyTextSync(text);
+      showToast('📋 コピーしました！LINEに貼り付けてね');
+    });
   }
 
   function clearForm() {

@@ -275,6 +275,13 @@
     f10:'行動', f11:'気づき・前提'
   };
 
+  // ⑨「本音のことば」を足したときに番号が1つずつ後ろへずれた。
+  // それ以前に書いた記録は f9=行動 / f10=前提 なので、読み込むときに直す
+  function migrate(e) {
+    if (e.v >= 2) return e;
+    return { ...e, f11: e.f10 || '', f10: e.f9 || '', f9: '', v: 2 };
+  }
+
   const Store = {
     all() {
       let list;
@@ -282,7 +289,7 @@
       catch (e) { list = []; }
       // 同じidが複数あっても1件に畳む
       const map = {};
-      for (const e of list) if (e && e.id) map[String(e.id)] = e;
+      for (const e of list) if (e && e.id) map[String(e.id)] = migrate(e);
       return Object.values(map);
     },
     sorted() {
@@ -372,7 +379,7 @@
 
   // ===== 保存 =====
   function save() {
-    const entry = { id: Store.newId(), date: new Date().toISOString() };
+    const entry = { id: Store.newId(), date: new Date().toISOString(), v: 2 };
     FIELDS.forEach(f => entry[f] = document.getElementById(f).value.trim());
 
     if (loopFrom) {

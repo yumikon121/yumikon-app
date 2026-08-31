@@ -158,7 +158,7 @@
 
     <div class="step">
       <div class="step-head"><div class="num">1</div>
-        <div><h3>出来事</h3><div class="q">何があった？</div></div></div>
+        <div><h3>出来事</h3><div class="q">何があった？　何にモヤモヤする？</div></div></div>
       <textarea id="f1" placeholder="イラッとしたこと、モヤモヤしたこと、嫌だったこと"></textarea>
       <div class="hint">💭 事実も気持ちも混ざっていていい。思い出したまま書いて</div>
     </div>
@@ -215,27 +215,20 @@
 
       <div class="step">
         <div class="step-head"><div class="num">8</div>
-          <div><h3>目的</h3><div class="q">本当は、どうしたかった？</div></div></div>
-        <textarea id="f8" placeholder="ただ気づいてほしかった&#10;一緒に喜んでほしかった"></textarea>
+          <div><h3>目的</h3><div class="q">本当は、どうしたかった？　本当は、なんて言いたかった？</div></div></div>
+        <textarea id="f8" placeholder="ただ気づいてほしかった&#10;「ありがとう」って言ってほしかった"></textarea>
       </div>
 
       <div class="step">
         <div class="step-head"><div class="num">9</div>
-          <div><h3>本音のことば</h3><div class="q">本当は、なんて言いたかった？</div></div></div>
-        <textarea id="f9" placeholder="「ありがとう」って言ってほしかった&#10;「大変だったね」って言ってほしかった"></textarea>
-        <div class="hint">💭 セリフの形で。声に出すつもりで書いてみて</div>
+          <div><h3>行動</h3><div class="q">じゃあ、できることは何？</div></div></div>
+        <textarea id="f9" placeholder="次は自分から言ってみる"></textarea>
       </div>
 
       <div class="step">
         <div class="step-head"><div class="num">10</div>
-          <div><h3>行動</h3><div class="q">じゃあ、できることは何？</div></div></div>
-        <textarea id="f10" placeholder="次は自分から言ってみる"></textarea>
-      </div>
-
-      <div class="step">
-        <div class="step-head"><div class="num">11</div>
           <div><h3>気づき・前提</h3><div class="q">どんな前提があったのかな</div></div></div>
-        <textarea id="f11" placeholder="どうせ私は分かってもらえない&#10;言っても無駄"></textarea>
+        <textarea id="f10" placeholder="どうせ私は分かってもらえない&#10;言っても無駄"></textarea>
         <div class="hint">💭 ここがクリアリングの入り口になる</div>
       </div>
 
@@ -268,18 +261,25 @@
   // 本番アプリとは別のキーを使う。同じブラウザで開いても混ざらない
   const KEY = 'labEntries';
 
-  const FIELDS = ['f1','f2','f3','f4','f5','f6','f7','f8','f9','f10','f11'];
+  const FIELDS = ['f1','f2','f3','f4','f5','f6','f7','f8','f9','f10'];
   const LABELS = {
     f1:'出来事', f2:'要因', f3:'事実', f4:'解釈', f5:'どんな扱い？',
-    f6:'感情（姫の声）', f7:'自分にもしてない？', f8:'目的', f9:'本音のことば',
-    f10:'行動', f11:'気づき・前提'
+    f6:'感情（姫の声）', f7:'自分にもしてない？', f8:'目的',
+    f9:'行動', f10:'気づき・前提'
   };
 
-  // ⑨「本音のことば」を足したときに番号が1つずつ後ろへずれた。
-  // それ以前に書いた記録は f9=行動 / f10=前提 なので、読み込むときに直す
+  // 一時的に⑨「本音のことば」を独立させた版（v2）だけ、欄がひとつ多い。
+  // いまは⑧に統合したので、v2 の記録は読み込むときに畳み直す
   function migrate(e) {
-    if (e.v >= 2) return e;
-    return { ...e, f11: e.f10 || '', f10: e.f9 || '', f9: '', v: 2 };
+    if (e.v !== 2) return e;
+    return {
+      id: e.id, date: e.date, rootId: e.rootId, loopNo: e.loopNo,
+      f1: e.f1, f2: e.f2, f3: e.f3, f4: e.f4, f5: e.f5, f6: e.f6, f7: e.f7,
+      f8: [e.f8, e.f9].filter(Boolean).join('\n'),
+      f9: e.f10 || '',
+      f10: e.f11 || '',
+      v: 3
+    };
   }
 
   const Store = {
@@ -379,7 +379,7 @@
 
   // ===== 保存 =====
   function save() {
-    const entry = { id: Store.newId(), date: new Date().toISOString(), v: 2 };
+    const entry = { id: Store.newId(), date: new Date().toISOString(), v: 3 };
     FIELDS.forEach(f => entry[f] = document.getElementById(f).value.trim());
 
     if (loopFrom) {
@@ -445,8 +445,8 @@
             '<div class="loop-no">' + (e.loopNo || 1) + '周目</div>' +
             '<div class="loop-body">' +
               '<div class="loop-label">前提</div>' +
-              '<div class="loop-text' + (e.f11 ? '' : ' none') + '">' +
-                esc(e.f11 || '（まだ書いてない）') + '</div>' +
+              '<div class="loop-text' + (e.f10 ? '' : ' none') + '">' +
+                esc(e.f10 || '（まだ書いてない）') + '</div>' +
             '</div>' +
           '</div>'
         ).join('') +

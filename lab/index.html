@@ -179,7 +179,7 @@
     </div>
 
     <div id="after">
-      <div class="step">
+      <div class="step" id="step3">
         <div class="step-head"><div class="num">3</div>
           <div><h3>事実</h3><div class="q">実際に起きたこと・相手が言ったこと</div></div></div>
         <textarea id="f3" placeholder="感情を抜いて、事実だけ"></textarea>
@@ -216,19 +216,26 @@
       <div class="step">
         <div class="step-head"><div class="num">8</div>
           <div><h3>目的</h3><div class="q">本当は、どうしたかった？</div></div></div>
-        <textarea id="f8" placeholder="ただ「ありがとう」って言ってほしかった"></textarea>
+        <textarea id="f8" placeholder="ただ気づいてほしかった&#10;一緒に喜んでほしかった"></textarea>
       </div>
 
       <div class="step">
         <div class="step-head"><div class="num">9</div>
-          <div><h3>行動</h3><div class="q">じゃあ、できることは何？</div></div></div>
-        <textarea id="f9" placeholder="次は自分から言ってみる"></textarea>
+          <div><h3>本音のことば</h3><div class="q">本当は、なんて言いたかった？</div></div></div>
+        <textarea id="f9" placeholder="「ありがとう」って言ってほしかった&#10;「大変だったね」って言ってほしかった"></textarea>
+        <div class="hint">💭 セリフの形で。声に出すつもりで書いてみて</div>
       </div>
 
       <div class="step">
         <div class="step-head"><div class="num">10</div>
+          <div><h3>行動</h3><div class="q">じゃあ、できることは何？</div></div></div>
+        <textarea id="f10" placeholder="次は自分から言ってみる"></textarea>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="num">11</div>
           <div><h3>気づき・前提</h3><div class="q">どんな前提があったのかな</div></div></div>
-        <textarea id="f10" placeholder="どうせ私は分かってもらえない&#10;言っても無駄"></textarea>
+        <textarea id="f11" placeholder="どうせ私は分かってもらえない&#10;言っても無駄"></textarea>
         <div class="hint">💭 ここがクリアリングの入り口になる</div>
       </div>
 
@@ -261,10 +268,11 @@
   // 本番アプリとは別のキーを使う。同じブラウザで開いても混ざらない
   const KEY = 'labEntries';
 
-  const FIELDS = ['f1','f2','f3','f4','f5','f6','f7','f8','f9','f10'];
+  const FIELDS = ['f1','f2','f3','f4','f5','f6','f7','f8','f9','f10','f11'];
   const LABELS = {
     f1:'出来事', f2:'要因', f3:'事実', f4:'解釈', f5:'どんな扱い？',
-    f6:'感情（姫の声）', f7:'自分にもしてない？', f8:'目的', f9:'行動', f10:'気づき・前提'
+    f6:'感情（姫の声）', f7:'自分にもしてない？', f8:'目的', f9:'本音のことば',
+    f10:'行動', f11:'気づき・前提'
   };
 
   const Store = {
@@ -343,8 +351,12 @@
       '<div class="s">ここから先は、相手の話はしません。<br>ぜんぶ自分のことだけを書いていきます。</div>' +
       '</div>';
     document.getElementById('after').classList.add('open');
+    // ③の入力欄が画面の上に来るところまでだけスクロールする
     setTimeout(() => {
-      document.getElementById('after').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const step3  = document.getElementById('step3');
+      const header = document.querySelector('header').offsetHeight;
+      const top    = step3.getBoundingClientRect().top + window.scrollY - header - 12;
+      window.scrollTo({ top, behavior: 'smooth' });
     }, 120);
   }
 
@@ -426,8 +438,8 @@
             '<div class="loop-no">' + (e.loopNo || 1) + '周目</div>' +
             '<div class="loop-body">' +
               '<div class="loop-label">前提</div>' +
-              '<div class="loop-text' + (e.f10 ? '' : ' none') + '">' +
-                esc(e.f10 || '（まだ書いてない）') + '</div>' +
+              '<div class="loop-text' + (e.f11 ? '' : ' none') + '">' +
+                esc(e.f11 || '（まだ書いてない）') + '</div>' +
             '</div>' +
           '</div>'
         ).join('') +

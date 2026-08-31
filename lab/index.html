@@ -72,6 +72,10 @@
   textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
   textarea::placeholder { color: #C9C0B8; }
   .hint { font-size: 11.5px; color: var(--light); margin-top: 7px; line-height: 1.6; }
+  .hint.warn {
+    background: var(--accent-light); color: #8F574F;
+    border-radius: 9px; padding: 10px 12px; font-size: 12px;
+  }
 
   .shutter-zone { margin: 18px 0; }
   .shutter-btn {
@@ -84,11 +88,14 @@
   .shutter-btn .lb { font-size: 15px; font-weight: 700; }
   .shutter-btn .sb { font-size: 11.5px; opacity: .75; }
   .shutter-done {
-    background: var(--green-light); border: 1px solid #CFE3D9;
-    border-radius: 14px; padding: 16px; text-align: center;
+    background: var(--dark); border-radius: 14px;
+    padding: 20px 18px; text-align: center; color: #fff;
   }
-  .shutter-done .t { font-size: 14px; font-weight: 700; color: var(--green); }
-  .shutter-done .s { font-size: 12px; color: var(--mid); margin-top: 5px; line-height: 1.6; }
+  .shutter-done .t { font-size: 16px; font-weight: 700; }
+  .shutter-done .s {
+    font-size: 14px; margin-top: 10px; line-height: 1.85; font-weight: 700;
+    padding-top: 10px; border-top: 1px solid rgba(255,255,255,.18);
+  }
 
   #after { display: none; }
   #after.open { display: block; }
@@ -188,14 +195,16 @@
 
       <div class="step">
         <div class="step-head"><div class="num">4</div>
-          <div><h3>解釈</h3><div class="q">それを見て、どう受け取った？　何をされたと思った？</div></div></div>
+          <div><h3>解釈</h3><div class="q">その事実に、どんな意味づけをした？　何をされたと思った？</div></div></div>
         <textarea id="f4" placeholder="無視されたと思った&#10;どうでもいいと思われてると思った"></textarea>
+        <div class="hint warn">⚠️ ここは<b>感情を書く欄じゃない</b>よ。<br>
+          「悲しい」じゃなくて、<b>その事実をどう受け取ったか</b>。感情は⑥で出すからね</div>
       </div>
 
       <div class="step">
         <div class="step-head"><div class="num">5</div>
           <div><h3>どんな扱い？</h3><div class="q">それって、自分がどんな扱いを受けたことになる？</div></div></div>
-        <textarea id="f5" placeholder="雑な扱い／都合のいい扱い／いない扱い"></textarea>
+        <textarea id="f5" placeholder="雑な扱い／都合のいい扱い／存在否定"></textarea>
         <div class="hint">💭 ひとことで言うと、で考えてみて</div>
       </div>
 
@@ -221,8 +230,9 @@
 
       <div class="step">
         <div class="step-head"><div class="num">9</div>
-          <div><h3>行動</h3><div class="q">じゃあ、できることは何？</div></div></div>
+          <div><h3>行動</h3><div class="q">目的を叶えるために、できることは何？</div></div></div>
         <textarea id="f9" placeholder="次は自分から言ってみる"></textarea>
+        <div class="hint">💭 大きく変えようとしなくていい。<b>自分の中でできる小さな一歩でOK</b></div>
       </div>
 
       <div class="step">
@@ -355,7 +365,8 @@
     document.getElementById('shutter-zone').innerHTML =
       '<div class="shutter-done">' +
       '<div class="t">🔒 シャッターを下ろしました</div>' +
-      '<div class="s">ここから先は、相手の話はしません。<br>ぜんぶ自分のことだけを書いていきます。</div>' +
+      '<div class="s">ここから先は、相手を責めることはできないよ。<br>' +
+      '全部、自分の中で起きてることを見ていこう。</div>' +
       '</div>';
     document.getElementById('after').classList.add('open');
     // ③の入力欄が画面の上に来るところまでだけスクロールする

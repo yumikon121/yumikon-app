@@ -93,9 +93,11 @@
   }
   .shutter-done .t { font-size: 16px; font-weight: 700; }
   .shutter-done .s {
-    font-size: 14px; margin-top: 10px; line-height: 1.85; font-weight: 700;
+    font-size: 14px; margin-top: 10px; line-height: 1.9; font-weight: 700;
     padding-top: 10px; border-top: 1px solid rgba(255,255,255,.18);
   }
+  /* 文の途中で折り返さないように、意味のまとまりで区切る */
+  .shutter-done .s span { display: inline-block; }
 
   #after { display: none; }
   #after.open { display: block; }
@@ -225,7 +227,9 @@
       <div class="step">
         <div class="step-head"><div class="num">8</div>
           <div><h3>目的</h3><div class="q">本当は、どうしたかった？　本当は、なんて言いたかった？</div></div></div>
-        <textarea id="f8" placeholder="ただ気づいてほしかった&#10;「ありがとう」って言ってほしかった"></textarea>
+        <textarea id="f8" placeholder="ただ気づいてほしかった&#10;「ありがとう」って言ってほしかった&#10;&#10;大切にしたかったのは、認めてもらうこと"></textarea>
+        <div class="hint">💭 書けたら、もうひと押し。<br>
+          「<b>そこで、何を大切にしたかった？</b>」まで下りると、自分の価値観が見えてくるよ</div>
       </div>
 
       <div class="step">
@@ -365,8 +369,10 @@
     document.getElementById('shutter-zone').innerHTML =
       '<div class="shutter-done">' +
       '<div class="t">🔒 シャッターを下ろしました</div>' +
-      '<div class="s">ここから先は、相手を責めることはできないよ。<br>' +
-      '全部、自分の中で起きてることを見ていこう。</div>' +
+      '<div class="s">' +
+      '<span>ここから先は、</span><span>相手を責めることはできないよ。</span><br>' +
+      '<span>全部、</span><span>自分の中で起きてることを</span><span>見ていこう。</span>' +
+      '</div>' +
       '</div>';
     document.getElementById('after').classList.add('open');
     // ③の入力欄が画面の上に来るところまでだけスクロールする

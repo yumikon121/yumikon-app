@@ -98,6 +98,11 @@
   }
   /* 文の途中で折り返さないように、意味のまとまりで区切る */
   .shutter-done .s span { display: inline-block; }
+  .reopen {
+    margin-top: 14px; background: rgba(255,255,255,.14); color: rgba(255,255,255,.8);
+    border: none; border-radius: 999px; font-family: inherit;
+    font-size: 12px; padding: 8px 18px; cursor: pointer;
+  }
 
   #after { display: none; }
   #after.open { display: block; }
@@ -373,6 +378,7 @@
       '<span>ここから先は、</span><span>相手を責めることはできないよ。</span><br>' +
       '<span>全部、</span><span>自分の中で起きてることを</span><span>見ていこう。</span>' +
       '</div>' +
+      '<button class="reopen" onclick="reopenShutter()">まだ出し切れてない</button>' +
       '</div>';
     document.getElementById('after').classList.add('open');
     // ③の入力欄が画面の上に来るところまでだけスクロールする
@@ -382,6 +388,13 @@
       const top    = step3.getBoundingClientRect().top + window.scrollY - header - 12;
       window.scrollTo({ top, behavior: 'smooth' });
     }, 120);
+  }
+
+  // ①②に書き足したくなったら、シャッターを開け直せる
+  function reopenShutter() {
+    resetShutter();
+    document.getElementById('f2').closest('.step')
+      .scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function resetShutter() {
@@ -501,6 +514,22 @@
       ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
   }
 
+  // スマホのブラウザはタブを開き直したとき画面の状態を復元することがある。
+  // ③以降が空っぽなのにシャッターが開いたままなら、閉じ直す
+  function resetShutterIfEmpty() {
+    const after = document.getElementById('after');
+    if (!after.classList.contains('open')) return;
+    const written = ['f3','f4','f5','f6','f7','f8','f9','f10']
+      .some(f => document.getElementById(f).value.trim());
+    if (!written) resetShutter();
+  }
+
+  window.addEventListener('pageshow', resetShutterIfEmpty);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resetShutterIfEmpty();
+  });
+
+  resetShutterIfEmpty();
   renderList();
 </script>
 </body>
